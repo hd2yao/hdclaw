@@ -34,21 +34,39 @@ export class FalProvider extends BaseProvider {
 
   private detectMode(userContext: string): "mirror" | "direct" {
     const mirrorKeywords =
-      /outfit|wearing|clothes|dress|suit|fashion|full-?body|mirror|reflection/i;
+      /outfit|wearing|clothes|dress|suit|fashion|full-?body|mirror|reflection|穿搭|穿着|全身|镜子|镜前/i;
     const directKeywords =
-      /cafe|restaurant|beach|park|city|close-?up|portrait|face|eyes|smile/i;
+      /cafe|restaurant|beach|park|city|close-?up|portrait|face|eyes|smile|自拍|近景|近距离|脸|眼神|微笑|工位|在干嘛|干啥|在做什么|你在干什么/i;
 
     if (directKeywords.test(userContext)) return "direct";
     if (mirrorKeywords.test(userContext)) return "mirror";
-    return "mirror";
+    return "direct";
+  }
+
+  private buildVariationHint(userContext: string): string {
+    const genericStatusKeywords =
+      /在干嘛|干啥|在做什么|你在干什么|what are you doing|what are you up to/i;
+    if (!genericStatusKeywords.test(userContext)) {
+      return "";
+    }
+
+    const variants = [
+      "slightly different camera angle and framing",
+      "candid moment with a subtle pose change",
+      "new composition with a bit more background detail",
+      "slight perspective shift as if taken just now",
+    ];
+    const idx = Math.floor(Date.now() / 1000) % variants.length;
+    return `, ${variants[idx]}`;
   }
 
   private buildLockedPrompt(userContext: string, mode: "mirror" | "direct"): string {
     const context = userContext.trim();
+    const variationHint = this.buildVariationHint(context);
     if (mode === "direct") {
-      return `a close-up selfie taken by herself at ${context}, direct eye contact with the camera, looking straight into the lens, eyes centered and clearly visible, not a mirror selfie, phone held at arm's length, face fully visible`;
+      return `a close-up selfie taken by herself at ${context}, direct eye contact with the camera, looking straight into the lens, eyes centered and clearly visible, not a mirror selfie, phone held at arm's length, face fully visible${variationHint}`;
     }
-    return `make a pic of this person, but ${context}. the person is taking a mirror selfie`;
+    return `make a pic of this person, but ${context}. the person is taking a mirror selfie${variationHint}`;
   }
 
   async generate(input: ProviderInput): Promise<ProviderOutput[]> {

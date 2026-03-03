@@ -53,6 +53,7 @@ Optional env vars:
 - `CLAWRA_REFERENCE_IMAGE`: override fixed reference image URL
 - `CLAWRA_SELFIE_MODE`: `auto` (default) / `mirror` / `direct`
 - `CLAWRA_USE_REFERENCE_IMAGE`: `true` (default). Set `false` to disable lock mode and use text-only generation.
+- For generic status asks (e.g. "你在干嘛"), Fal auto mode injects a small composition-variation hint to reduce repeated near-identical outputs.
 
 ## Telegram Notes
 
