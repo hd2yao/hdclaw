@@ -1,0 +1,13 @@
+{
+  "gateway": {
+    "port": 19001
+  },
+  "agents": {
+    "defaults": {
+      "maxConcurrent": 2,
+      "subagents": {
+        "maxConcurrent": 4
+      }
+    }
+  }
+}

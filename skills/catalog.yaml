@@ -1,0 +1,26 @@
+version: 1
+skills:
+  - name: clawra-selfie
+    kind: custom
+    source: ./skills/custom/clawra-selfie
+    install: symlink
+    enabled: true
+    env:
+      CLAWRA_IMAGE_PROVIDER: ${CLAWRA_IMAGE_PROVIDER}
+      CLAWRA_IMAGE_MODEL: ${CLAWRA_IMAGE_MODEL}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      FAL_KEY: ${FAL_KEY}
+
+  - name: weather
+    kind: oss-pinned
+    source: ./skills/vendor/weather
+    version: local-placeholder
+    install: copy
+    enabled: false
+
+  - name: summarize
+    kind: oss-online
+    source: clawhub:summarize
+    channel: clawhub
+    install: pull-latest
+    enabled: false
