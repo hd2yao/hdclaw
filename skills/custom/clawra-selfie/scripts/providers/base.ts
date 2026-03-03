@@ -69,7 +69,7 @@ export abstract class BaseProvider implements ImageProvider {
     return process.env.CLAWRA_IMAGE_MODEL || defaultModel;
   }
 
-  protected getApiKey(envVar: string): string | undefined {
+  protected getSkillEnv(envVar: string): string | undefined {
     const fromEnv = process.env[envVar];
     if (fromEnv) {
       return fromEnv;
@@ -83,5 +83,14 @@ export abstract class BaseProvider implements ImageProvider {
     const skillId = process.env.CLAWRA_SKILL_ID || "clawra-selfie";
     const fromConfig = config.skills?.entries?.[skillId]?.env?.[envVar];
     return fromConfig || undefined;
+  }
+
+  protected getApiKey(envVar: string): string | undefined {
+    return this.getSkillEnv(envVar);
+  }
+
+  protected getReferenceImage(defaultUrl: string): string {
+    const fromEnv = this.getSkillEnv("CLAWRA_REFERENCE_IMAGE");
+    return fromEnv || defaultUrl;
   }
 }

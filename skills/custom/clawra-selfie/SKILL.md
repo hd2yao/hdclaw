@@ -39,10 +39,20 @@ npx ts-node scripts/clawra-selfie.ts "<prompt>" <platform> <target> [caption]
 - `CLAWRA_IMAGE_PROVIDER=runware` (fallback/manual switch)
 - `CLAWRA_IMAGE_PROVIDER=fal` (fallback/manual switch)
 - Model controlled by `CLAWRA_IMAGE_MODEL` (default `gpt-image-1`)
+- Fal provider defaults to **reference-image lock mode** (`xai/grok-imagine-image/edit`)
+- Reference image URL defaults to `https://cdn.jsdelivr.net/gh/SumeLabs/clawra@main/assets/clawra.png`
 - Keys:
   - `OPENAI_API_KEY` for OpenAI
   - `RUNWARE_API_KEY` for Runware
   - `FAL_KEY` for Fal
+
+## Reference Lock (Fal)
+
+Optional env vars:
+
+- `CLAWRA_REFERENCE_IMAGE`: override fixed reference image URL
+- `CLAWRA_SELFIE_MODE`: `auto` (default) / `mirror` / `direct`
+- `CLAWRA_USE_REFERENCE_IMAGE`: `true` (default). Set `false` to disable lock mode and use text-only generation.
 
 ## Telegram Notes
 
