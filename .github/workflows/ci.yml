@@ -1,0 +1,25 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Shell syntax
+        run: |
+          bash -n scripts/*.sh tests/config/*.sh tests/skills/*.sh
+
+      - name: Config tests
+        run: |
+          make test-config
+
+      - name: Local install smoke (no OpenClaw dependency)
+        run: |
+          OPENCLAW_SKILLS_DIR=/tmp/openclaw-skills INSTALL_ONLINE=false bash scripts/install-skills.sh

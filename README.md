@@ -7,9 +7,10 @@
 - `skills/custom/`: 自定义 skills 源码
 - `skills/vendor/`: 固定版本第三方 skills
 - `skills/catalog.yaml`: 技能安装清单
+- `legacy/clawra/`: 历史 `clawra` 项目快照（只读参考）
 - `scripts/`: 初始化/同步/安装/验证脚本
 - `tests/`: 配置与技能测试
-- `docs/`: 架构与运维文档
+- `docs/`: 架构、迁移、运维与 GitHub 治理文档
 
 ## 快速开始
 ```bash
@@ -37,3 +38,4 @@ make status
 ## 注意
 - `.env.local` 不入库。
 - 密钥只放 `.env.local` 和本机 `~/.openclaw/openclaw.json`。
+- GitHub 治理开关见 `docs/github-hardening.md`。

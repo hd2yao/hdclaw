@@ -35,8 +35,13 @@ openclaw logs --follow
 1. 修改 `.env.local` 中对应变量。
 2. 执行 `make sync`。
 3. 执行 `make verify` 确认运行正常。
+4. Gateway token 轮换后执行 `openclaw gateway restart`。
 
 ## 回滚配置
 1. 查看 `~/.openclaw/backup/<timestamp>/openclaw.json`。
 2. 复制目标备份覆盖 `~/.openclaw/openclaw.json`。
 3. `openclaw gateway restart`。
+
+## GitHub 治理
+1. 按 `docs/github-hardening.md` 打开 branch protection。
+2. 打开 secret scanning 与 push protection。
