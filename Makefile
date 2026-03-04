@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: bootstrap sync install-skills verify doctor start restart status test-config test-skills
+.PHONY: bootstrap sync install-skills verify doctor start restart status test-config test-skills test-adapter
 
 bootstrap:
 	bash scripts/bootstrap.sh
@@ -31,3 +31,9 @@ test-config:
 
 test-skills:
 	bash tests/skills/smoke-test.sh
+
+test-adapter:
+	bash tests/adapter/streaming-smoke.sh
+	bash tests/adapter/streaming-contract.sh
+	bash tests/adapter/toolcall-transform-stream.sh
+	bash tests/adapter/fallback-behavior.sh
