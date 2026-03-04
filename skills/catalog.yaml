@@ -27,3 +27,9 @@ skills:
     channel: clawhub
     install: pull-latest
     enabled: false
+
+  - name: ai-news-daily
+    kind: custom
+    source: ./skills/custom/ai-news-daily
+    install: symlink
+    enabled: true

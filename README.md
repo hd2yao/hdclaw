@@ -32,6 +32,26 @@ make restart
 make status
 ```
 
+## 每日 AI 热点自动化
+配置 `.env.local`（至少包含 Telegram 目标）后：
+
+```bash
+make setup-ai-news-daily
+```
+
+手动触发一次：
+
+```bash
+make run-ai-news-daily-now
+```
+
+运行新增校验：
+
+```bash
+make test-ai-news-daily
+```
+
+完整流程说明见 [docs/ai-news-daily-runbook.md](docs/ai-news-daily-runbook.md)。
 ## 网关地址
 - Dashboard: `http://127.0.0.1:18789/`
 
