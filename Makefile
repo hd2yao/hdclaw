@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: bootstrap sync install-skills verify doctor start restart status test-config test-skills setup-ai-news-daily run-ai-news-daily-now test-ai-news-daily
+.PHONY: bootstrap sync install-skills verify doctor start restart status test-config test-skills test-adapter setup-ai-news-daily run-ai-news-daily-now test-ai-news-daily
 
 bootstrap:
 	bash scripts/bootstrap.sh
@@ -31,6 +31,12 @@ test-config:
 
 test-skills:
 	bash tests/skills/smoke-test.sh
+
+test-adapter:
+	bash tests/adapter/streaming-smoke.sh
+	bash tests/adapter/streaming-contract.sh
+	bash tests/adapter/toolcall-transform-stream.sh
+	bash tests/adapter/fallback-behavior.sh
 
 setup-ai-news-daily:
 	bash scripts/setup-ai-news-daily-cron.sh
