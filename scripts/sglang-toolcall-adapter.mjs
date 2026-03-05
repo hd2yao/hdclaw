@@ -413,6 +413,8 @@ function makeStreamState() {
     finishReason: "stop",
     usage: null,
     toolCallIndex: 0,
+    fallbackToolCallIndex: 0,
+    toolCallStates: new Map(),
     emittedToolCalls: false,
     introResolved: false,
     introBuffer: "",
@@ -459,7 +461,8 @@ function emitTextWithIntroGuard(res, state, text, force = false) {
     return;
   }
 
-  if (!force && !/\n{2,}/.test(buffer)) return;
+  const hasDelimiter = /\n{2,}/.test(buffer);
+  if (!force && !hasDelimiter && looksLikeMetaPreamble(buffer)) return;
 
   const cleaned = stripLeadingMetaPreamble(buffer);
   state.introResolved = true;
@@ -467,7 +470,70 @@ function emitTextWithIntroGuard(res, state, text, force = false) {
   if (cleaned) sendTextChunk(res, state, cleaned);
 }
 
+function trailingMarkerPrefixLength(text, marker) {
+  const max = Math.min(text.length, marker.length - 1);
+  for (let size = max; size > 0; size -= 1) {
+    if (text.endsWith(marker.slice(0, size))) return size;
+  }
+  return 0;
+}
+
+function normalizeToolCallIndex(state, rawIndex) {
+  if (Number.isInteger(rawIndex) && rawIndex >= 0) {
+    state.fallbackToolCallIndex = Math.max(state.fallbackToolCallIndex, rawIndex + 1);
+    return rawIndex;
+  }
+  const fallback = state.fallbackToolCallIndex;
+  state.fallbackToolCallIndex += 1;
+  return fallback;
+}
+
+function mergeToolCallArguments(prevArgs, nextArgs) {
+  const prev = typeof prevArgs === "string" ? prevArgs : "";
+  if (typeof nextArgs !== "string") return prev;
+  if (!prev) return nextArgs;
+  if (nextArgs.startsWith(prev)) return nextArgs;
+  return `${prev}${nextArgs}`;
+}
+
+function mergeNativeToolCallDelta(state, rawCall) {
+  const index = normalizeToolCallIndex(state, rawCall?.index);
+  const prev = state.toolCallStates.get(index) ?? {
+    index,
+    id: null,
+    type: "function",
+    function: {
+      name: "",
+      arguments: "",
+    },
+  };
+
+  const rawFunction = rawCall?.function && typeof rawCall.function === "object" ? rawCall.function : {};
+  const merged = {
+    index,
+    id: typeof rawCall?.id === "string" && rawCall.id ? rawCall.id : prev.id,
+    type: typeof rawCall?.type === "string" && rawCall.type ? rawCall.type : prev.type || "function",
+    function: {
+      name:
+        typeof rawFunction.name === "string"
+          ? rawFunction.name
+          : prev.function?.name || "",
+      arguments: mergeToolCallArguments(prev.function?.arguments, rawFunction.arguments),
+    },
+  };
+
+  if (!merged.id) {
+    merged.id = `call_${randomUUID().replace(/-/g, "").slice(0, 24)}`;
+  }
+
+  state.toolCallStates.set(index, merged);
+  return merged;
+}
+
 function sendToolCallChunk(res, state, call) {
+  let index = state.toolCallIndex;
+  while (state.toolCallStates.has(index)) index += 1;
+  state.toolCallIndex = index + 1;
   sendSseData(res, {
     ...state.base,
     choices: [
@@ -476,7 +542,7 @@ function sendToolCallChunk(res, state, call) {
         delta: {
           tool_calls: [
             {
-              index: state.toolCallIndex,
+              index,
               id: call.id,
               type: "function",
               function: {
@@ -490,7 +556,32 @@ function sendToolCallChunk(res, state, call) {
       },
     ],
   });
-  state.toolCallIndex += 1;
+  state.emittedToolCalls = true;
+}
+
+function sendNativeToolCallChunk(res, state, call) {
+  sendSseData(res, {
+    ...state.base,
+    choices: [
+      {
+        index: 0,
+        delta: {
+          tool_calls: [
+            {
+              index: call.index,
+              id: call.id,
+              type: call.type || "function",
+              function: {
+                name: call.function?.name ?? "",
+                arguments: call.function?.arguments ?? "",
+              },
+            },
+          ],
+        },
+        finish_reason: null,
+      },
+    ],
+  });
   state.emittedToolCalls = true;
 }
 
@@ -512,14 +603,9 @@ function consumeContentDelta(res, state, text) {
     return;
   }
 
-  const guard = marker.length - 1;
-  if (combined.length <= guard) {
-    state.plainTail = combined;
-    return;
-  }
-
-  const emitPart = combined.slice(0, combined.length - guard);
-  const keepTail = combined.slice(combined.length - guard);
+  const keepLength = trailingMarkerPrefixLength(combined, marker);
+  const emitPart = keepLength > 0 ? combined.slice(0, combined.length - keepLength) : combined;
+  const keepTail = keepLength > 0 ? combined.slice(combined.length - keepLength) : "";
   if (emitPart) emitTextWithIntroGuard(res, state, emitPart);
   state.plainTail = keepTail;
 }
@@ -626,14 +712,12 @@ async function handleStreamChat(req, res, targetUrl, requestJson, requestId) {
         if (Array.isArray(delta.tool_calls) && delta.tool_calls.length > 0) {
           emitAndTrack(() => {
             if (!state.roleSent) sendRoleChunk(res, state);
+            if (state.plainTail) {
+              emitTextWithIntroGuard(res, state, state.plainTail, true);
+              state.plainTail = "";
+            }
             for (const call of delta.tool_calls) {
-              sendToolCallChunk(res, state, {
-                id: call.id || `call_${randomUUID().replace(/-/g, "").slice(0, 24)}`,
-                function: {
-                  name: call.function?.name ?? "",
-                  arguments: call.function?.arguments ?? "{}",
-                },
-              });
+              sendNativeToolCallChunk(res, state, mergeNativeToolCallDelta(state, call));
             }
             state.markerSeen = true;
           });
