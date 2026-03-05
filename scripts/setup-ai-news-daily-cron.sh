@@ -50,7 +50,7 @@ set -a
 source "$ENV_FILE"
 set +a
 
-: "${AI_NEWS_OBSIDIAN_DIR:=/Users/dysania/program/documents/obsidian_vault/news/daily}"
+: "${AI_NEWS_OBSIDIAN_DIR:=$HOME/obsidian/news/daily}"
 : "${AI_NEWS_AGENT_ID:=main}"
 : "${AI_NEWS_TZ:=Asia/Shanghai}"
 : "${AI_NEWS_CRON:=30 8 * * *}"
