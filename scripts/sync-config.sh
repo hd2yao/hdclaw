@@ -29,6 +29,7 @@ set +a
 
 llm_mode="${OPENCLAW_LLM_MODE:-openai-codex}"
 openai_model="${OPENCLAW_OPENAI_MODEL:-openai-codex/gpt-5.3-codex}"
+openai_model_params_json="${OPENCLAW_OPENAI_MODEL_PARAMS_JSON:-}"
 local_provider="${OPENCLAW_LOCAL_PROVIDER:-local}"
 local_model_id="${OPENCLAW_LOCAL_MODEL_ID:-my-local-model}"
 local_model_name="${OPENCLAW_LOCAL_MODEL_NAME:-Local Model}"
@@ -154,7 +155,23 @@ ruby -rjson -e '
   local_reasoning = ARGV[10] == "true"
   memory_flush_enabled = ARGV[11] == "true"
   thinking_default = ARGV[12]
-  local_model_params_raw = ARGV[13]
+  openai_model_params_raw = ARGV[13]
+  local_model_params_raw = ARGV[14]
+
+  openai_model_params = nil
+  unless openai_model_params_raw.to_s.strip.empty?
+    begin
+      parsed = JSON.parse(openai_model_params_raw)
+    rescue JSON::ParserError => e
+      warn "[sync-config] invalid OPENCLAW_OPENAI_MODEL_PARAMS_JSON: #{e.message}"
+      exit 1
+    end
+    unless parsed.is_a?(Hash)
+      warn "[sync-config] OPENCLAW_OPENAI_MODEL_PARAMS_JSON must be a JSON object"
+      exit 1
+    end
+    openai_model_params = parsed
+  end
 
   local_model_params = nil
   unless local_model_params_raw.to_s.strip.empty?
@@ -173,6 +190,8 @@ ruby -rjson -e '
 
   local_key = "#{local_provider}/#{local_model_id}"
   primary = mode == "local" ? local_key : openai_model
+  openai_model_entry = {}
+  openai_model_entry["params"] = openai_model_params unless openai_model_params.nil?
   local_model_entry = {}
   local_model_entry["params"] = local_model_params unless local_model_params.nil?
 
@@ -187,7 +206,7 @@ ruby -rjson -e '
           }
         },
         "models" => {
-          openai_model => {},
+          openai_model => openai_model_entry,
           local_key => local_model_entry
         }
       }
@@ -235,6 +254,7 @@ ruby -rjson -e '
   "$local_reasoning" \
   "$memory_flush_enabled" \
   "$thinking_default" \
+  "$openai_model_params_json" \
   "$local_model_params_json" > "$llm_json_file"
 
 web_json_file="$(mktemp)"
@@ -244,11 +264,11 @@ ruby -rjson -e '
   api_key = ARGV[2]
   enabled = mode == "brave"
 
-  search = { "enabled" => enabled }
-  if enabled
-    search["provider"] = provider
-    search["apiKey"] = api_key unless api_key.to_s.empty?
-  end
+  search = {
+    "enabled" => enabled,
+    "provider" => (enabled ? provider : nil),
+    "apiKey" => (enabled && !api_key.to_s.empty? ? api_key : nil)
+  }
 
   out = {
     "tools" => {
