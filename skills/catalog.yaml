@@ -33,3 +33,17 @@ skills:
     source: ./skills/custom/ai-news-daily
     install: symlink
     enabled: true
+
+  - name: keyless-search
+    kind: custom
+    source: ./skills/custom/keyless-search
+    install: symlink
+    enabled: true
+
+  - name: tavily-search
+    kind: custom
+    source: ./skills/custom/tavily-search
+    install: symlink
+    enabled: true
+    env:
+      TAVILY_API_KEY: ${?TAVILY_API_KEY}

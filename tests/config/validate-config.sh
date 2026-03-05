@@ -12,6 +12,7 @@ ENV_OK="$TMP_DIR/.env.ok"
 ENV_LOCAL="$TMP_DIR/.env.local-model"
 ENV_LOCAL_ADAPTER="$TMP_DIR/.env.local-adapter"
 ENV_INVALID="$TMP_DIR/.env.invalid"
+ENV_WEB_BRAVE="$TMP_DIR/.env.web.brave"
 
 cat > "$ENV_BAD" <<'EOB'
 CLAWRA_IMAGE_PROVIDER=fal
@@ -26,6 +27,8 @@ FAL_KEY=test-fal-key
 CLAWRA_REFERENCE_IMAGE=https://example.com/clawra.png
 CLAWRA_SELFIE_MODE=auto
 CLAWRA_USE_REFERENCE_IMAGE=true
+OPENCLAW_THINKING_DEFAULT=off
+OPENCLAW_TELEGRAM_STREAM_MODE=off
 EOG
 
 cat > "$ENV_LOCAL" <<'EOL'
@@ -46,7 +49,21 @@ OPENCLAW_LOCAL_API_KEY=local-noauth
 OPENCLAW_LOCAL_CONTEXT_WINDOW=131072
 OPENCLAW_LOCAL_MAX_TOKENS=8192
 OPENCLAW_LOCAL_REASONING=true
+OPENCLAW_LOCAL_MODEL_PARAMS_JSON='{"chat_template_kwargs":{"enable_thinking":false}}'
 EOL
+
+cat > "$ENV_WEB_BRAVE" <<'EOW'
+CLAWRA_IMAGE_PROVIDER=fal
+CLAWRA_IMAGE_MODEL=gpt-image-1
+OPENAI_API_KEY=test-openai-key
+FAL_KEY=test-fal-key
+CLAWRA_REFERENCE_IMAGE=https://example.com/clawra.png
+CLAWRA_SELFIE_MODE=auto
+CLAWRA_USE_REFERENCE_IMAGE=true
+OPENCLAW_WEB_SEARCH_MODE=brave
+OPENCLAW_WEB_SEARCH_API_KEY=test-brave-key
+TAVILY_API_KEY=test-tavily-key
+EOW
 
 cat > "$ENV_INVALID" <<'EOI'
 CLAWRA_IMAGE_PROVIDER=fal
@@ -89,6 +106,17 @@ if OPENCLAW_ENV_FILE="$ENV_BAD" OPENCLAW_CONFIG_TARGET="$TARGET" OPENCLAW_BACKUP
 fi
 
 echo "[test-config] case2: full env should pass"
+cat > "$TARGET" <<'EOC'
+{
+  "channels": {
+    "telegram": {
+      "enabled": true,
+      "streamMode": "partial"
+    }
+  }
+}
+EOC
+
 OPENCLAW_ENV_FILE="$ENV_OK" OPENCLAW_CONFIG_TARGET="$TARGET" OPENCLAW_BACKUP_DIR="$BACKUP_DIR" \
   bash "$ROOT_DIR/scripts/sync-config.sh" >/dev/null
 
@@ -96,6 +124,31 @@ OPENCLAW_ENV_FILE="$ENV_OK" OPENCLAW_CONFIG_TARGET="$TARGET" OPENCLAW_BACKUP_DIR
 
 jq -er '.agents.defaults.model.primary == "openai-codex/gpt-5.3-codex"' "$TARGET" >/dev/null || {
   echo "[test-config] expected default openai-codex primary model" >&2
+  exit 1
+}
+
+jq -er '.agents.defaults.thinkingDefault == "off"' "$TARGET" >/dev/null || {
+  echo "[test-config] expected thinkingDefault off" >&2
+  exit 1
+}
+
+jq -er '.tools.web.search.enabled == false' "$TARGET" >/dev/null || {
+  echo "[test-config] expected web_search disabled when no API key is configured" >&2
+  exit 1
+}
+
+jq -er '.channels.telegram.streamMode == "off"' "$TARGET" >/dev/null || {
+  echo "[test-config] expected telegram streamMode override to off" >&2
+  exit 1
+}
+
+jq -er '.skills.entries["tavily-search"].enabled == true' "$TARGET" >/dev/null || {
+  echo "[test-config] expected tavily-search enabled from catalog" >&2
+  exit 1
+}
+
+jq -er '.skills.entries["tavily-search"].env.TAVILY_API_KEY == ""' "$TARGET" >/dev/null || {
+  echo "[test-config] expected optional tavily key to render empty string when unset" >&2
   exit 1
 }
 
@@ -133,6 +186,16 @@ jq -er '.models.providers.vllm.models[0].id == "/data/qwen3.5-27b"' "$TARGET" >/
   exit 1
 }
 
+jq -er '.agents.defaults.models["vllm//data/qwen3.5-27b"].params.chat_template_kwargs.enable_thinking == false' "$TARGET" >/dev/null || {
+  echo "[test-config] expected local model params to be injected" >&2
+  exit 1
+}
+
+jq -er '.tools.web.search.enabled == false' "$TARGET" >/dev/null || {
+  echo "[test-config] expected web_search disabled in local mode without key" >&2
+  exit 1
+}
+
 echo "[test-config] case4: local adapter mode should override baseUrl and disable memory flush by default"
 OPENCLAW_ENV_FILE="$ENV_LOCAL_ADAPTER" OPENCLAW_CONFIG_TARGET="$TARGET" OPENCLAW_BACKUP_DIR="$BACKUP_DIR" \
   bash "$ROOT_DIR/scripts/sync-config.sh" >/dev/null
@@ -152,7 +215,36 @@ jq -er '.agents.defaults.compaction.memoryFlush.enabled == false' "$TARGET" >/de
   exit 1
 }
 
-echo "[test-config] case5: invalid llm mode should fail"
+jq -er '.tools.web.search.enabled == false' "$TARGET" >/dev/null || {
+  echo "[test-config] expected web_search disabled in adapter mode without key" >&2
+  exit 1
+}
+
+echo "[test-config] case5: explicit brave mode with key should enable web_search"
+OPENCLAW_ENV_FILE="$ENV_WEB_BRAVE" OPENCLAW_CONFIG_TARGET="$TARGET" OPENCLAW_BACKUP_DIR="$BACKUP_DIR" \
+  bash "$ROOT_DIR/scripts/sync-config.sh" >/dev/null
+
+jq -er '.tools.web.search.enabled == true' "$TARGET" >/dev/null || {
+  echo "[test-config] expected web_search enabled in brave mode with key" >&2
+  exit 1
+}
+
+jq -er '.tools.web.search.provider == "brave"' "$TARGET" >/dev/null || {
+  echo "[test-config] expected web_search provider to be brave" >&2
+  exit 1
+}
+
+jq -er '.tools.web.search.apiKey == "test-brave-key"' "$TARGET" >/dev/null || {
+  echo "[test-config] expected web_search apiKey from OPENCLAW_WEB_SEARCH_API_KEY" >&2
+  exit 1
+}
+
+jq -er '.skills.entries["tavily-search"].env.TAVILY_API_KEY == "test-tavily-key"' "$TARGET" >/dev/null || {
+  echo "[test-config] expected optional tavily key to render configured value" >&2
+  exit 1
+}
+
+echo "[test-config] case6: invalid llm mode should fail"
 if OPENCLAW_ENV_FILE="$ENV_INVALID" OPENCLAW_CONFIG_TARGET="$TARGET" OPENCLAW_BACKUP_DIR="$BACKUP_DIR" \
   bash "$ROOT_DIR/scripts/sync-config.sh" >/dev/null 2>&1; then
   echo "[test-config] expected invalid llm mode failure but got success" >&2
