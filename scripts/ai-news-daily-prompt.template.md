@@ -11,9 +11,9 @@
 - 入选数量：${AI_NEWS_PICK_N}
 
 必须执行：
-1. 优先使用 Tavily（`tavily-search`）+ web_fetch 从英文优先来源收集 AI 新闻（官方源 + 主流媒体 + 社区）。
-   - 若未配置 `TAVILY_API_KEY`，回退到 web_search + web_fetch。
-   - 若 web_search 也不可用（如未配置 Brave key），改用 `keyless-search`（Bing RSS）+ web_fetch。
+1. 使用 `search-router` 执行统一检索：模型原生检索优先，其次 Tavily，再次 keyless，最后 Brave 兜底；再结合 web_fetch 抓取详情。
+   - 命令：`node skills/custom/search-router/scripts/search-router.mjs --query "<query>" --max <n>`
+   - 若返回来源集中或不稳定，必须追加多轮检索（不同关键词/来源方向）直到收集到足量候选。
 2. 先收集近 ${AI_NEWS_LOOKBACK_HOURS} 小时；若有效热点不足 ${AI_NEWS_TOP_N} 条，回溯到 ${AI_NEWS_FALLBACK_HOURS} 小时补齐。
 3. 去重后按以下热度规则评分（总分 100）：
    - 来源权威性 35
@@ -33,7 +33,11 @@
 9. 向 Telegram `${AI_NEWS_TELEGRAM_TARGET}` 发送简报，内容包括：
    - 10 热点标题 + 链接
    - 三篇标题 + 摘要
-10. 若任一步失败，请明确写出失败阶段与原因。
+10. 只有在“检索工具完全不可用”或“网络完全不可达”时，才允许任务失败；否则必须继续完成产出并标注低置信度条目。
+11. 禁止输出 `NO_REPLY`。即使失败，也必须输出失败原因与当前进度。
+12. 不要要求用户再回复“开始执行”或任何确认指令；收到本任务后必须立即执行。
+13. 禁止输出“中间进度/继续执行中/下一步计划”；本次响应必须是最终交付内容。
+14. 若高质量来源不足，允许纳入低置信度条目并显式标注“低置信”，但仍必须补足 ${AI_NEWS_TOP_N} 条并完成后续全部产出。
 
 最后返回：
 - 文件绝对路径

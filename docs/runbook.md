@@ -20,12 +20,30 @@ make verify
 ## 切换模型后端（OpenAI / 本地）
 1. 修改 `.env.local` 中以下变量：
    - `OPENCLAW_LLM_MODE=openai-codex`（OpenAI）或 `OPENCLAW_LLM_MODE=local`（本地）
+   - OpenAI 原生检索参数（可选）：`OPENCLAW_OPENAI_MODEL_PARAMS_JSON='{"tools":[{"type":"web_search_preview"}]}'`
    - 本地模式补充：`OPENCLAW_LOCAL_PROVIDER`、`OPENCLAW_LOCAL_MODEL_ID`、`OPENCLAW_LOCAL_BASE_URL`、`OPENCLAW_LOCAL_API`、`OPENCLAW_LOCAL_API_KEY`
    - 无 Brave key 场景建议：`OPENCLAW_WEB_SEARCH_MODE=off`
    - 如需启用内置 web_search：`OPENCLAW_WEB_SEARCH_MODE=brave` + `OPENCLAW_WEB_SEARCH_API_KEY=...`
    - SGLang 文本工具调用适配（可选）：`OPENCLAW_LOCAL_TOOLCALL_ADAPTER=sglang`、`OPENCLAW_LOCAL_TOOLCALL_ADAPTER_BASE_URL`
 2. 执行 `make sync`。
 3. 执行 `openclaw models status --plain` 确认当前主模型。
+
+## 联网检索优先级（统一）
+固定顺序：
+1. 模型原生检索（可用时）
+2. `tavily-search`
+3. `keyless-search`
+4. Brave key（最后兜底）
+
+主命令：
+```bash
+node skills/custom/search-router/scripts/search-router.mjs --query "OpenAI latest news" --max 10
+```
+
+若希望通过 `openclaw agent` 稳定执行同一路由：
+```bash
+make run-web-query QUERY="查看一下有关 AI 的最新新闻，给我10条"
+```
 
 ## 本地模型无 Brave key 的联网检索
 1. 设置 `.env.local`：
@@ -40,14 +58,13 @@ make install-skills
 3. 检查：
 ```bash
 openclaw config get tools.web.search --json
+openclaw skills info search-router
 openclaw skills info tavily-search
 openclaw skills info keyless-search
 ```
 4. 联网检索：
 ```bash
-node skills/custom/tavily-search/scripts/tavily-search.mjs --query "OpenAI latest news" --max 5
-# 如无 Tavily key，再使用下列兜底路径
-node skills/custom/keyless-search/scripts/keyless-search.mjs --query "OpenAI latest news" --max 5
+node skills/custom/search-router/scripts/search-router.mjs --query "OpenAI latest news" --max 10
 ```
 
 ## SGLang 工具调用兼容（`<tool_call>` -> `tool_calls`）

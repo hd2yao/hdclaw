@@ -2,7 +2,17 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-SAMPLE_FILE="${1:-$ROOT_DIR/tests/skills/fixtures/ai-news-daily.sample.md}"
+SAMPLE_FILE="${1:-}"
+
+if [[ -z "$SAMPLE_FILE" ]]; then
+  OUTPUT_DIR="${AI_NEWS_OBSIDIAN_DIR:-$HOME/obsidian/news/daily}"
+  SAMPLE_FILE="$(ls -1t "$OUTPUT_DIR"/*-ai-hotspots.md 2>/dev/null | head -n1 || true)"
+fi
+
+if [[ -z "$SAMPLE_FILE" ]]; then
+  echo "[test-ai-news-contract] no generated output found; set AI_NEWS_OBSIDIAN_DIR or pass an explicit file path" >&2
+  exit 1
+fi
 
 [[ -f "$SAMPLE_FILE" ]] || { echo "[test-ai-news-contract] file not found: $SAMPLE_FILE" >&2; exit 1; }
 
