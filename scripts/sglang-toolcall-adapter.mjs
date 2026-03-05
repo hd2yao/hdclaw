@@ -103,6 +103,48 @@ function stripInternalMarkers(rawText) {
   return noTool.trim();
 }
 
+function looksLikeMetaPreamble(text) {
+  const normalized = String(text ?? "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+  if (!normalized) return false;
+  if (normalized.length > 280) return false;
+
+  if (/^(user|the user)\b/.test(normalized)) return true;
+  if (/^用户/.test(normalized)) return true;
+  if (/\bi should\b/.test(normalized)) return true;
+  if (/no tools needed/.test(normalized)) return true;
+  if (/casual(,| )friendly|friendly response|intent summary/.test(normalized)) return true;
+  if (/作为[^。]{0,40}(角色|助手|回应|回复)/.test(normalized)) return true;
+  return false;
+}
+
+function stripLeadingMetaPreamble(rawText) {
+  const text = String(rawText ?? "").trim();
+  if (!text) return text;
+  const match = text.match(/^([\s\S]*?)\n{2,}([\s\S]*)$/);
+  if (match) {
+    const firstParagraph = (match[1] ?? "").trim();
+    const remaining = (match[2] ?? "").trimStart();
+    if (remaining && looksLikeMetaPreamble(firstParagraph)) return remaining;
+  }
+
+  const lines = text.split(/\r?\n/);
+  if (lines.length >= 2) {
+    const firstLine = (lines[0] ?? "").trim();
+    if (looksLikeMetaPreamble(firstLine)) {
+      const rest = lines.slice(1).join("\n").trimStart();
+      if (rest) return rest;
+    }
+  }
+  return text;
+}
+
+function sanitizeUserFacingText(rawText) {
+  return stripLeadingMetaPreamble(stripInternalMarkers(rawText));
+}
+
 function toOpenAIToolCall(parsedCall) {
   return {
     id: `call_${randomUUID().replace(/-/g, "").slice(0, 24)}`,
@@ -129,7 +171,7 @@ function transformChatCompletionPayload(payload) {
 
     const parsedCalls = extractToolCallsFromText(content);
     if (parsedCalls.length === 0) {
-      const cleaned = stripInternalMarkers(content);
+      const cleaned = sanitizeUserFacingText(content);
       if (cleaned !== content) {
         message.content = cleaned || null;
         converted = true;
@@ -372,6 +414,8 @@ function makeStreamState() {
     usage: null,
     toolCallIndex: 0,
     emittedToolCalls: false,
+    introResolved: false,
+    introBuffer: "",
   };
 }
 
@@ -400,6 +444,27 @@ function sendTextChunk(res, state, text) {
     ...state.base,
     choices: [{ index: 0, delta: { content: text }, finish_reason: null }],
   });
+}
+
+function emitTextWithIntroGuard(res, state, text, force = false) {
+  if (state.introResolved) {
+    if (text) sendTextChunk(res, state, text);
+    return;
+  }
+
+  if (text) state.introBuffer += text;
+  const buffer = state.introBuffer;
+  if (!buffer) {
+    if (force) state.introResolved = true;
+    return;
+  }
+
+  if (!force && !/\n{2,}/.test(buffer)) return;
+
+  const cleaned = stripLeadingMetaPreamble(buffer);
+  state.introResolved = true;
+  state.introBuffer = "";
+  if (cleaned) sendTextChunk(res, state, cleaned);
 }
 
 function sendToolCallChunk(res, state, call) {
@@ -440,7 +505,7 @@ function consumeContentDelta(res, state, text) {
   const markerIndex = combined.indexOf(marker);
   if (markerIndex >= 0) {
     const prefix = combined.slice(0, markerIndex);
-    if (prefix) sendTextChunk(res, state, prefix);
+    if (prefix) emitTextWithIntroGuard(res, state, prefix);
     state.markerSeen = true;
     state.toolBuffer += combined.slice(markerIndex);
     state.plainTail = "";
@@ -455,15 +520,17 @@ function consumeContentDelta(res, state, text) {
 
   const emitPart = combined.slice(0, combined.length - guard);
   const keepTail = combined.slice(combined.length - guard);
-  if (emitPart) sendTextChunk(res, state, emitPart);
+  if (emitPart) emitTextWithIntroGuard(res, state, emitPart);
   state.plainTail = keepTail;
 }
 
 function flushBufferedOutput(res, state) {
   if (!state.markerSeen) {
     if (state.plainTail) {
-      sendTextChunk(res, state, state.plainTail);
+      emitTextWithIntroGuard(res, state, state.plainTail, true);
       state.plainTail = "";
+    } else {
+      emitTextWithIntroGuard(res, state, "", true);
     }
     return;
   }
@@ -477,8 +544,8 @@ function flushBufferedOutput(res, state) {
     return;
   }
 
-  const cleaned = stripInternalMarkers(state.toolBuffer);
-  if (cleaned) sendTextChunk(res, state, cleaned);
+  const cleaned = sanitizeUserFacingText(state.toolBuffer);
+  if (cleaned) emitTextWithIntroGuard(res, state, cleaned, true);
 }
 
 async function handleStreamChat(req, res, targetUrl, requestJson, requestId) {
