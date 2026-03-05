@@ -68,17 +68,47 @@ OPENCLAW_LOCAL_MODEL_ID=my-local-model
 OPENCLAW_LOCAL_BASE_URL=http://127.0.0.1:1234/v1
 OPENCLAW_LOCAL_API=openai-completions
 OPENCLAW_LOCAL_API_KEY=local-noauth
+# 不使用 Brave key 时建议关闭 web_search（避免 missing_brave_api_key）
+OPENCLAW_WEB_SEARCH_MODE=off
 
 # 可选：SGLang 工具调用适配（把 <tool_call> 转换为标准 tool_calls）
 OPENCLAW_LOCAL_TOOLCALL_ADAPTER=sglang
 OPENCLAW_LOCAL_TOOLCALL_ADAPTER_BASE_URL=http://127.0.0.1:31001/v1
 # 可选：是否启用预压缩 memory flush（适配模式默认会自动关闭）
 OPENCLAW_MEMORY_FLUSH_ENABLED=false
+
+# 如需启用 OpenClaw 内置 web_search（Brave）
+OPENCLAW_WEB_SEARCH_MODE=brave
+OPENCLAW_WEB_SEARCH_API_KEY=your-brave-key
 ```
 
 ```bash
 make sync
 openclaw models status --plain
+```
+
+## 本地模型无 key 联网检索
+当 `OPENCLAW_WEB_SEARCH_MODE=off` 时，`web_search` 会关闭（不再触发 Brave key 报错）。
+
+优先使用 `tavily-search`（需要 `TAVILY_API_KEY`）：
+
+```bash
+node skills/custom/tavily-search/scripts/tavily-search.mjs --query "OpenAI latest news" --max 5
+```
+
+若未配置 Tavily key，使用 `keyless-search` 兜底：
+
+```bash
+node skills/custom/keyless-search/scripts/keyless-search.mjs --query "OpenAI latest news" --max 5
+```
+
+安装并检查 skill：
+
+```bash
+make install-skills
+openclaw skills info tavily-search
+openclaw skills info keyless-search
+make test-no-brave-search
 ```
 
 ## SGLang 适配代理（推荐）

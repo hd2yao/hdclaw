@@ -11,7 +11,9 @@
 - 入选数量：${AI_NEWS_PICK_N}
 
 必须执行：
-1. 使用 web_search + web_fetch 从英文优先来源收集 AI 新闻（官方源 + 主流媒体 + 社区）。
+1. 优先使用 Tavily（`tavily-search`）+ web_fetch 从英文优先来源收集 AI 新闻（官方源 + 主流媒体 + 社区）。
+   - 若未配置 `TAVILY_API_KEY`，回退到 web_search + web_fetch。
+   - 若 web_search 也不可用（如未配置 Brave key），改用 `keyless-search`（Bing RSS）+ web_fetch。
 2. 先收集近 ${AI_NEWS_LOOKBACK_HOURS} 小时；若有效热点不足 ${AI_NEWS_TOP_N} 条，回溯到 ${AI_NEWS_FALLBACK_HOURS} 小时补齐。
 3. 去重后按以下热度规则评分（总分 100）：
    - 来源权威性 35

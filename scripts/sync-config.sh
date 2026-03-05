@@ -38,9 +38,15 @@ local_api_key="${OPENCLAW_LOCAL_API_KEY:-local-noauth}"
 local_context_window="${OPENCLAW_LOCAL_CONTEXT_WINDOW:-128000}"
 local_max_tokens="${OPENCLAW_LOCAL_MAX_TOKENS:-8192}"
 local_reasoning="${OPENCLAW_LOCAL_REASONING:-false}"
+local_model_params_json="${OPENCLAW_LOCAL_MODEL_PARAMS_JSON:-}"
 local_toolcall_adapter="${OPENCLAW_LOCAL_TOOLCALL_ADAPTER:-off}"
 local_toolcall_adapter_base_url="${OPENCLAW_LOCAL_TOOLCALL_ADAPTER_BASE_URL:-http://127.0.0.1:31001/v1}"
 memory_flush_enabled="${OPENCLAW_MEMORY_FLUSH_ENABLED:-}"
+thinking_default="${OPENCLAW_THINKING_DEFAULT:-off}"
+telegram_stream_mode="${OPENCLAW_TELEGRAM_STREAM_MODE:-keep}"
+web_search_mode="${OPENCLAW_WEB_SEARCH_MODE:-auto}"
+web_search_provider="brave"
+web_search_api_key="${OPENCLAW_WEB_SEARCH_API_KEY:-${BRAVE_API_KEY:-}}"
 
 case "$llm_mode" in
   openai-codex|local) ;;
@@ -54,6 +60,30 @@ case "$local_toolcall_adapter" in
   off|sglang) ;;
   *)
     echo "[sync-config] invalid OPENCLAW_LOCAL_TOOLCALL_ADAPTER: $local_toolcall_adapter (expected: off or sglang)" >&2
+    exit 1
+    ;;
+esac
+
+case "$web_search_mode" in
+  auto|off|brave) ;;
+  *)
+    echo "[sync-config] invalid OPENCLAW_WEB_SEARCH_MODE: $web_search_mode (expected: auto, off, or brave)" >&2
+    exit 1
+    ;;
+esac
+
+case "$thinking_default" in
+  off|minimal|low|medium|high|xhigh) ;;
+  *)
+    echo "[sync-config] invalid OPENCLAW_THINKING_DEFAULT: $thinking_default (expected: off|minimal|low|medium|high|xhigh)" >&2
+    exit 1
+    ;;
+esac
+
+case "$telegram_stream_mode" in
+  keep|off|partial|block) ;;
+  *)
+    echo "[sync-config] invalid OPENCLAW_TELEGRAM_STREAM_MODE: $telegram_stream_mode (expected: keep|off|partial|block)" >&2
     exit 1
     ;;
 esac
@@ -90,6 +120,25 @@ if [[ "$memory_flush_enabled" != "true" && "$memory_flush_enabled" != "false" ]]
   exit 1
 fi
 
+effective_web_search_mode="$web_search_mode"
+if [[ "$effective_web_search_mode" == "auto" ]]; then
+  if [[ -n "$web_search_api_key" ]]; then
+    effective_web_search_mode="brave"
+  else
+    effective_web_search_mode="off"
+  fi
+fi
+
+web_search_enabled="false"
+if [[ "$effective_web_search_mode" == "brave" ]]; then
+  if [[ -z "$web_search_api_key" ]]; then
+    echo "[sync-config] OPENCLAW_WEB_SEARCH_MODE=brave but API key is missing; disabling web_search" >&2
+    effective_web_search_mode="off"
+  else
+    web_search_enabled="true"
+  fi
+fi
+
 llm_json_file="$(mktemp)"
 ruby -rjson -e '
   mode = ARGV[0]
@@ -104,13 +153,33 @@ ruby -rjson -e '
   local_max_tokens = ARGV[9].to_i
   local_reasoning = ARGV[10] == "true"
   memory_flush_enabled = ARGV[11] == "true"
+  thinking_default = ARGV[12]
+  local_model_params_raw = ARGV[13]
+
+  local_model_params = nil
+  unless local_model_params_raw.to_s.strip.empty?
+    begin
+      parsed = JSON.parse(local_model_params_raw)
+    rescue JSON::ParserError => e
+      warn "[sync-config] invalid OPENCLAW_LOCAL_MODEL_PARAMS_JSON: #{e.message}"
+      exit 1
+    end
+    unless parsed.is_a?(Hash)
+      warn "[sync-config] OPENCLAW_LOCAL_MODEL_PARAMS_JSON must be a JSON object"
+      exit 1
+    end
+    local_model_params = parsed
+  end
 
   local_key = "#{local_provider}/#{local_model_id}"
   primary = mode == "local" ? local_key : openai_model
+  local_model_entry = {}
+  local_model_entry["params"] = local_model_params unless local_model_params.nil?
 
   out = {
     "agents" => {
       "defaults" => {
+        "thinkingDefault" => thinking_default,
         "model" => { "primary" => primary },
         "compaction" => {
           "memoryFlush" => {
@@ -119,7 +188,7 @@ ruby -rjson -e '
         },
         "models" => {
           openai_model => {},
-          local_key => {}
+          local_key => local_model_entry
         }
       }
     },
@@ -164,7 +233,39 @@ ruby -rjson -e '
   "$local_context_window" \
   "$local_max_tokens" \
   "$local_reasoning" \
-  "$memory_flush_enabled" > "$llm_json_file"
+  "$memory_flush_enabled" \
+  "$thinking_default" \
+  "$local_model_params_json" > "$llm_json_file"
+
+web_json_file="$(mktemp)"
+ruby -rjson -e '
+  mode = ARGV[0]
+  provider = ARGV[1]
+  api_key = ARGV[2]
+  enabled = mode == "brave"
+
+  search = { "enabled" => enabled }
+  if enabled
+    search["provider"] = provider
+    search["apiKey"] = api_key unless api_key.to_s.empty?
+  end
+
+  out = {
+    "tools" => {
+      "web" => {
+        "search" => search,
+        "fetch" => {
+          "enabled" => true
+        }
+      }
+    }
+  }
+
+  puts JSON.pretty_generate(out)
+' \
+  "$effective_web_search_mode" \
+  "$web_search_provider" \
+  "$web_search_api_key" > "$web_json_file"
 
 missing_vars="$(ruby -ryaml -e '
   c = YAML.load_file(ARGV[0]) || {}
@@ -172,7 +273,10 @@ missing_vars="$(ruby -ryaml -e '
   (c["skills"] || []).each do |s|
     next unless s["enabled"]
     (s["env"] || {}).each_value do |v|
-      v.to_s.scan(/\$\{([A-Z0-9_]+)\}/).flatten.each { |k| miss << k }
+      v.to_s.scan(/\$\{(\??)([A-Z0-9_]+)\}/).each do |opt, key|
+        # ${VAR} => required; ${?VAR} => optional
+        miss << key if opt.to_s.empty?
+      end
     end
   end
   miss.uniq.each do |k|
@@ -202,7 +306,16 @@ ruby -ryaml -rjson -e '
     unless env.empty?
       rendered = {}
       env.each do |k, v|
-        rendered[k] = v.to_s.gsub(/\$\{([A-Z0-9_]+)\}/) { ENV[$1] || "" }
+        rendered[k] = v.to_s.gsub(/\$\{(\??)([A-Z0-9_]+)\}/) do
+          opt = Regexp.last_match(1)
+          key = Regexp.last_match(2)
+          val = ENV[key]
+          if opt == "?"
+            val.to_s
+          else
+            val || ""
+          end
+        end
       end
       entry["env"] = rendered
     end
@@ -232,9 +345,11 @@ fi
 
 tmp_out="$(mktemp)"
 jq \
+  --arg telegramStreamMode "$telegram_stream_mode" \
   --slurpfile base "$BASE_CONFIG_PATH" \
   --slurpfile entries "$entries_json_file" \
   --slurpfile llm "$llm_json_file" \
+  --slurpfile web "$web_json_file" \
   --slurpfile patch "$PATCH_PATH" '
   def dmerge(a; b):
     reduce (b | keys_unsorted[]) as $k (a;
@@ -249,16 +364,21 @@ jq \
   (($base[0] // {}) as $b |
    ($patch[0] // {}) as $p |
    ($llm[0] // {}) as $l |
+   ($web[0] // {}) as $w |
    ($entries[0] // {}) as $e |
    (. // {}) as $orig |
-   dmerge(dmerge(dmerge($orig; $b); $p); $l)
+   dmerge(dmerge(dmerge(dmerge($orig; $b); $p); $l); $w)
    | .skills = (.skills // {})
    | .skills.entries = ((.skills.entries // {}) + $e)
+   | if ($telegramStreamMode != "keep" and (.channels | type) == "object" and (.channels.telegram | type) == "object")
+     then .channels.telegram.streamMode = $telegramStreamMode
+     else .
+     end
   )
 ' "$tmp_target" > "$tmp_out"
 
 mv "$tmp_out" "$TARGET_CONFIG"
 chmod 600 "$TARGET_CONFIG" || true
 
-rm -f "$entries_json_file" "$llm_json_file" "$tmp_target" "$tmp_empty_json"
+rm -f "$entries_json_file" "$llm_json_file" "$web_json_file" "$tmp_target" "$tmp_empty_json"
 echo "[sync-config] wrote $TARGET_CONFIG"
