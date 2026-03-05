@@ -1,0 +1,9 @@
+.git
+.gitignore
+.env.local
+.envrc
+.DS_Store
+.tmp
+node_modules
+legacy
+reviews

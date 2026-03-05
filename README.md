@@ -30,7 +30,48 @@ make verify
 make doctor
 make restart
 make status
+make run-web-query QUERY="查看一下有关 AI 的最新新闻，给我10条"
 ```
+
+## Docker（全新 OpenClaw，独立于本仓库配置）
+当前容器模板目录：`containers/openclaw-fresh/`。
+下面这组命令会创建一个全新的容器实例，只安装官方 OpenClaw，不执行本仓库的 `make sync/install-skills`：
+
+```bash
+make docker-build
+make docker-up
+make docker-shell
+```
+
+若后续新增多套容器模板，可切换目录名：
+
+```bash
+DOCKER_STACK=openclaw-fresh make docker-up
+# 未来例如：
+# DOCKER_STACK=openclaw-dev2 make docker-up
+```
+
+首次初始化（全新实例）建议直接在宿主机执行：
+
+```bash
+make docker-onboard
+make docker-gateway-start
+make docker-gateway-status
+```
+
+常用容器命令：
+
+```bash
+make docker-logs
+make docker-gateway-status
+make docker-down
+```
+
+说明：
+- 容器内 OpenClaw 数据目录是独立卷：`openclaw-home`（不会写入本机 `~/.openclaw`）。
+- 容器内工作目录是独立卷：`openclaw-workspace`。
+- `make docker-up` 后会自动启动网关（容器内前台模式，不依赖 systemd）。
+- Dashboard 默认端口映射为 `http://127.0.0.1:18790/`（可通过 `OPENCLAW_DASHBOARD_PORT` 覆盖）。
 
 ## 每日 AI 热点自动化
 配置 `.env.local`（至少包含 Telegram 目标）后：
@@ -60,6 +101,8 @@ make test-ai-news-daily
 # 切回 OpenAI Codex
 OPENCLAW_LLM_MODE=openai-codex
 OPENCLAW_OPENAI_MODEL=openai-codex/gpt-5.3-codex
+# 可选：给 OpenAI 模型注入原生检索参数
+OPENCLAW_OPENAI_MODEL_PARAMS_JSON='{"tools":[{"type":"web_search_preview"}]}'
 
 # 切到本地 OpenAI-compatible 服务
 OPENCLAW_LLM_MODE=local
@@ -90,15 +133,22 @@ openclaw models status --plain
 ## 本地模型无 key 联网检索
 当 `OPENCLAW_WEB_SEARCH_MODE=off` 时，`web_search` 会关闭（不再触发 Brave key 报错）。
 
-优先使用 `tavily-search`（需要 `TAVILY_API_KEY`）：
+统一路由（推荐）：
+
+```bash
+node skills/custom/search-router/scripts/search-router.mjs --query "OpenAI latest news" --max 10
+```
+
+该路由固定顺序为：
+1. 模型原生检索（可用时）
+2. tavily-search
+3. keyless-search
+4. Brave key（最后兜底）
+
+仍可单独调用：
 
 ```bash
 node skills/custom/tavily-search/scripts/tavily-search.mjs --query "OpenAI latest news" --max 5
-```
-
-若未配置 Tavily key，使用 `keyless-search` 兜底：
-
-```bash
 node skills/custom/keyless-search/scripts/keyless-search.mjs --query "OpenAI latest news" --max 5
 ```
 
@@ -106,10 +156,24 @@ node skills/custom/keyless-search/scripts/keyless-search.mjs --query "OpenAI lat
 
 ```bash
 make install-skills
+openclaw skills info search-router
 openclaw skills info tavily-search
 openclaw skills info keyless-search
 make test-no-brave-search
 ```
+
+## 强制检索入口（推荐）
+为避免模型直接“凭记忆回答”，可使用统一入口：
+
+```bash
+make run-web-query QUERY="查看一下有关 AI 的最新新闻，给我10条"
+```
+
+该入口会先执行 `search-router`，并按固定顺序尝试：
+1. 模型原生检索
+2. tavily-search
+3. keyless-search
+4. Brave key（最后兜底）
 
 ## SGLang 适配代理（推荐）
 当 SGLang 返回文本 `<tool_call>` 而不是标准 `tool_calls` 时，先启动本地适配代理：

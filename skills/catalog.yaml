@@ -47,3 +47,15 @@ skills:
     enabled: true
     env:
       TAVILY_API_KEY: ${?TAVILY_API_KEY}
+
+  - name: search-router
+    kind: custom
+    source: ./skills/custom/search-router
+    install: symlink
+    enabled: true
+    env:
+      OPENAI_API_KEY: ${?OPENAI_API_KEY}
+      OPENCLAW_OPENAI_MODEL: ${?OPENCLAW_OPENAI_MODEL}
+      TAVILY_API_KEY: ${?TAVILY_API_KEY}
+      OPENCLAW_WEB_SEARCH_API_KEY: ${?OPENCLAW_WEB_SEARCH_API_KEY}
+      BRAVE_API_KEY: ${?BRAVE_API_KEY}

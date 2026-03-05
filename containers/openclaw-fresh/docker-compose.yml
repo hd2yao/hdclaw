@@ -1,0 +1,27 @@
+name: openclaw-fresh
+
+services:
+  openclaw:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /home/node/workspace
+    stdin_open: true
+    tty: true
+    ports:
+      - "${OPENCLAW_DASHBOARD_PORT:-18790}:18789"
+    volumes:
+      - openclaw-home:/home/node/.openclaw
+      - openclaw-workspace:/home/node/workspace
+    environment:
+      OPENCLAW_DOCKER_AUTO_ONBOARD: "false"
+      OPENCLAW_DOCKER_GATEWAY: "true"
+      OPENCLAW_DOCKER_DISABLE_DEVICE_AUTH: "${OPENCLAW_DOCKER_DISABLE_DEVICE_AUTH:-true}"
+      OPENCLAW_DASHBOARD_PORT: "${OPENCLAW_DASHBOARD_PORT:-18790}"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: ["bash", "-lc", "openclaw-container-init && tail -f /dev/null"]
+
+volumes:
+  openclaw-home:
+  openclaw-workspace:
