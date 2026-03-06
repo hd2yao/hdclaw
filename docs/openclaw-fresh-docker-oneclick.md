@@ -56,8 +56,10 @@ OPENCLAW_SKIP_BUILD=1 make docker-fresh-bootstrap
    - `nonInteractivePermissions=fail`
    - 安装并绑定本地 `acpx` 命令
 4. 配置 exec approvals（默认/主 agent）为 `full + ask off`
-5. 启动 node host，并输出 `node.list` 状态
-6. 验证：
+5. 如果检测到 `wexin-read-mcp/requirements.txt`，自动安装其 Python 依赖
+6. 如果容器里已安装 Python Playwright，则自动安装 Chromium 浏览器
+7. 启动 node host，并输出 `node.list` 状态
+8. 验证：
    - `sudo -n whoami`
    - `python3 --version` / `pip3 --version`
    - `tools.exec` / `tools.elevated`
@@ -145,7 +147,15 @@ openclaw doctor
    - 原因：之前是运行时手工 `apt install`，容器一旦 `recreate` 就会丢
    - 修复：已把 `python3`/`python3-pip` 固化到 `containers/openclaw-fresh/Dockerfile`，重建镜像后长期生效
 
-9. Telegram 群里 `@bot` 没反应，但私聊正常
+9. `Host system is missing dependencies to run browsers`
+   - 原因：`weixin-read-mcp` 依赖 Python Playwright，但容器缺少 Chromium 的 Linux 运行库
+   - 修复：已把常用 Playwright 运行库固化到 `containers/openclaw-fresh/Dockerfile`，并在 bootstrap 中自动执行 `python3 -m playwright install chromium`
+
+10. 容器重建后 `weixin-read-mcp` 又提示缺少 `playwright` / `fastmcp` / `bs4`
+   - 原因：这些 Python 包之前是运行时手工安装，没进入镜像，也不在持久卷里
+   - 修复：bootstrap 现在会自动对 `/home/node/.openclaw/workspace/wexin-read-mcp/requirements.txt` 执行 `pip3 install --user --break-system-packages -r ...`
+
+11. Telegram 群里 `@bot` 没反应，但私聊正常
    - 现象：`openclaw channels status --probe` 显示 Telegram 正常，但群里 `@bot` 无回复
    - 典型原因：
      - Docker 实例的 `channels.telegram.groupPolicy=allowlist`，但没有配置 `groupAllowFrom` / `allowFrom`

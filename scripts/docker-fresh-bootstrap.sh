@@ -133,6 +133,35 @@ configure_exec_approvals() {
   '
 }
 
+ensure_weixin_read_runtime() {
+  log "ensuring weixin-read-mcp python dependencies"
+  compose exec -T "$SERVICE" sh -lc '
+    set -e
+    REQ=/home/node/.openclaw/workspace/wexin-read-mcp/requirements.txt
+    if [ -f "$REQ" ]; then
+      python3 -m pip install --user --break-system-packages -r "$REQ"
+    else
+      echo "weixin-read-mcp requirements not found; skip python dependency install"
+    fi
+  '
+}
+
+ensure_playwright_runtime() {
+  log "ensuring Playwright browser runtime"
+  compose exec -T "$SERVICE" sh -lc '
+    set -e
+    if python3 - <<'"'"'PY'"'"'
+import importlib.util
+raise SystemExit(0 if importlib.util.find_spec("playwright") else 1)
+PY
+    then
+      python3 -m playwright install chromium
+    else
+      echo "playwright python package not installed; skip browser install"
+    fi
+  '
+}
+
 start_node_host() {
   log "starting node host"
   compose exec -T "$SERVICE" sh -lc '
@@ -179,6 +208,8 @@ main() {
 
   configure_openclaw
   configure_exec_approvals
+  ensure_weixin_read_runtime
+  ensure_playwright_runtime
 
   log "restarting container to apply config cleanly"
   compose restart "$SERVICE" >/dev/null
