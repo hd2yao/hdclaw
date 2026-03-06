@@ -135,6 +135,67 @@ async function handleChat(req, res, reqJson) {
     return;
   }
 
+  if (mode === "stream-native-toolcall-fragments") {
+    const base = baseChunk();
+    sendSseStart(res);
+    sendSseChunk(res, {
+      ...base,
+      choices: [{ index: 0, delta: { role: "assistant" }, finish_reason: null }],
+    });
+    sendSseChunk(res, {
+      ...base,
+      choices: [
+        {
+          index: 0,
+          delta: {
+            tool_calls: [
+              {
+                index: 0,
+                id: "call_native_1",
+                type: "function",
+                function: {
+                  name: "get_weather",
+                  arguments: "{\"city\":\"Bei",
+                },
+              },
+            ],
+          },
+          finish_reason: null,
+        },
+      ],
+    });
+    sendSseChunk(res, {
+      ...base,
+      choices: [
+        {
+          index: 0,
+          delta: {
+            tool_calls: [
+              {
+                index: 0,
+                function: {
+                  arguments: "jing\"}",
+                },
+              },
+            ],
+          },
+          finish_reason: null,
+        },
+      ],
+    });
+    sendSseChunk(res, {
+      ...base,
+      choices: [{ index: 0, delta: {}, finish_reason: "tool_calls" }],
+      usage: {
+        prompt_tokens: 10,
+        completion_tokens: 8,
+        total_tokens: 18,
+      },
+    });
+    sendSseDone(res);
+    return;
+  }
+
   const base = baseChunk();
   sendSseStart(res);
   sendSseChunk(res, {

@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: bootstrap sync install-skills verify doctor start restart status test-config test-skills test-keyless-search test-tavily-search test-no-brave-search test-adapter setup-ai-news-daily run-ai-news-daily-now test-ai-news-daily
+.PHONY: bootstrap sync install-skills verify doctor start restart status test-config test-skills test-keyless-search test-tavily-search test-search-router test-no-brave-search test-adapter setup-ai-news-daily run-ai-news-daily-now run-web-query test-ai-news-daily
 
 bootstrap:
 	bash scripts/bootstrap.sh
@@ -38,6 +38,9 @@ test-keyless-search:
 test-tavily-search:
 	bash tests/skills/tavily-search-smoke.sh
 
+test-search-router:
+	bash tests/skills/search-router-order.sh
+
 test-no-brave-search:
 	bash tests/skills/no-brave-websearch-regression.sh
 
@@ -52,6 +55,9 @@ setup-ai-news-daily:
 
 run-ai-news-daily-now:
 	bash scripts/run-ai-news-daily-now.sh
+
+run-web-query:
+	bash scripts/agent-web-query.sh "$(QUERY)"
 
 test-ai-news-daily:
 	bash tests/config/validate-ai-news-env.sh

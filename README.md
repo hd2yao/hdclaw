@@ -30,6 +30,7 @@ make verify
 make doctor
 make restart
 make status
+make run-web-query QUERY="查看一下有关 AI 的最新新闻，给我10条"
 ```
 
 ## 每日 AI 热点自动化
@@ -60,6 +61,8 @@ make test-ai-news-daily
 # 切回 OpenAI Codex
 OPENCLAW_LLM_MODE=openai-codex
 OPENCLAW_OPENAI_MODEL=openai-codex/gpt-5.3-codex
+# 可选：给 OpenAI 模型注入原生检索参数
+OPENCLAW_OPENAI_MODEL_PARAMS_JSON='{"tools":[{"type":"web_search_preview"}]}'
 
 # 切到本地 OpenAI-compatible 服务
 OPENCLAW_LLM_MODE=local
@@ -90,15 +93,22 @@ openclaw models status --plain
 ## 本地模型无 key 联网检索
 当 `OPENCLAW_WEB_SEARCH_MODE=off` 时，`web_search` 会关闭（不再触发 Brave key 报错）。
 
-优先使用 `tavily-search`（需要 `TAVILY_API_KEY`）：
+统一路由（推荐）：
+
+```bash
+node skills/custom/search-router/scripts/search-router.mjs --query "OpenAI latest news" --max 10
+```
+
+该路由固定顺序为：
+1. 模型原生检索（可用时）
+2. tavily-search
+3. keyless-search
+4. Brave key（最后兜底）
+
+仍可单独调用：
 
 ```bash
 node skills/custom/tavily-search/scripts/tavily-search.mjs --query "OpenAI latest news" --max 5
-```
-
-若未配置 Tavily key，使用 `keyless-search` 兜底：
-
-```bash
 node skills/custom/keyless-search/scripts/keyless-search.mjs --query "OpenAI latest news" --max 5
 ```
 
@@ -106,10 +116,24 @@ node skills/custom/keyless-search/scripts/keyless-search.mjs --query "OpenAI lat
 
 ```bash
 make install-skills
+openclaw skills info search-router
 openclaw skills info tavily-search
 openclaw skills info keyless-search
 make test-no-brave-search
 ```
+
+## 强制检索入口（推荐）
+为避免模型直接“凭记忆回答”，可使用统一入口：
+
+```bash
+make run-web-query QUERY="查看一下有关 AI 的最新新闻，给我10条"
+```
+
+该入口会先执行 `search-router`，并按固定顺序尝试：
+1. 模型原生检索
+2. tavily-search
+3. keyless-search
+4. Brave key（最后兜底）
 
 ## SGLang 适配代理（推荐）
 当 SGLang 返回文本 `<tool_call>` 而不是标准 `tool_calls` 时，先启动本地适配代理：

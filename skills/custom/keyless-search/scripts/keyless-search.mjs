@@ -61,7 +61,7 @@ function parseRss(xml, maxItems) {
 
   for (const block of itemBlocks) {
     const title = pickTag(block, 'title');
-    const link = pickTag(block, 'link');
+    const link = unwrapBingNewsLink(pickTag(block, 'link'));
     const description = pickTag(block, 'description');
     const pubDate = pickTag(block, 'pubDate');
 
@@ -80,18 +80,39 @@ function parseRss(xml, maxItems) {
   return items;
 }
 
-async function main() {
-  const args = parseArgs(process.argv.slice(2));
-
-  if (!args.query) {
-    console.error('Usage: keyless-search.mjs --query "text" [--max 5] [--market en-US]');
-    process.exit(2);
+function unwrapBingNewsLink(input) {
+  if (!input) return '';
+  try {
+    const parsed = new URL(input);
+    const host = parsed.hostname.toLowerCase();
+    if (!host.endsWith('bing.com')) return input;
+    if (!/\/news\/apiclick\.aspx$/i.test(parsed.pathname)) return input;
+    const target = parsed.searchParams.get('url');
+    return target || input;
+  } catch {
+    return input;
   }
+}
 
-  const endpoint = new URL('https://www.bing.com/search');
-  endpoint.searchParams.set('q', args.query);
+function dedupeByUrl(items, maxItems) {
+  const out = [];
+  const seen = new Set();
+  for (const item of items) {
+    const url = String(item?.url ?? '').trim();
+    if (!/^https?:\/\//i.test(url)) continue;
+    if (seen.has(url)) continue;
+    seen.add(url);
+    out.push(item);
+    if (out.length >= maxItems) break;
+  }
+  return out;
+}
+
+async function fetchBingRss({ query, market, mode }) {
+  const endpoint = new URL(mode === 'news' ? 'https://www.bing.com/news/search' : 'https://www.bing.com/search');
+  endpoint.searchParams.set('q', query);
   endpoint.searchParams.set('format', 'rss');
-  endpoint.searchParams.set('mkt', args.market);
+  endpoint.searchParams.set('mkt', market);
 
   const res = await fetch(endpoint, {
     headers: {
@@ -100,16 +121,44 @@ async function main() {
   });
 
   if (!res.ok) {
-    console.error(`keyless-search upstream error: ${res.status} ${res.statusText}`);
-    process.exit(1);
+    throw new Error(`keyless-search upstream error: ${res.status} ${res.statusText}`);
   }
 
   const xml = await res.text();
-  const results = parseRss(xml, args.max);
+  return parseRss(xml, 50);
+}
+
+async function main() {
+  const args = parseArgs(process.argv.slice(2));
+
+  if (!args.query) {
+    console.error('Usage: keyless-search.mjs --query "text" [--max 5] [--market en-US]');
+    process.exit(2);
+  }
+
+  let newsResults = [];
+  let webResults = [];
+
+  try {
+    newsResults = await fetchBingRss({ query: args.query, market: args.market, mode: 'news' });
+  } catch (err) {
+    console.error(`keyless-search news-rss failed: ${err?.message ?? String(err)}`);
+  }
+
+  if (newsResults.length < args.max) {
+    try {
+      webResults = await fetchBingRss({ query: args.query, market: args.market, mode: 'web' });
+    } catch (err) {
+      console.error(`keyless-search web-rss failed: ${err?.message ?? String(err)}`);
+    }
+  }
+
+  const results = dedupeByUrl([...newsResults, ...webResults], args.max);
 
   const out = {
     query: args.query,
     provider: 'bing-rss',
+    mode: newsResults.length > 0 ? 'news+web' : 'web-only',
     fetchedAt: new Date().toISOString(),
     count: results.length,
     results

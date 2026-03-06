@@ -27,6 +27,7 @@ FAL_KEY=test-fal-key
 CLAWRA_REFERENCE_IMAGE=https://example.com/clawra.png
 CLAWRA_SELFIE_MODE=auto
 CLAWRA_USE_REFERENCE_IMAGE=true
+OPENCLAW_OPENAI_MODEL_PARAMS_JSON='{"tools":[{"type":"web_search_preview"}]}'
 OPENCLAW_THINKING_DEFAULT=off
 OPENCLAW_TELEGRAM_STREAM_MODE=off
 EOG
@@ -124,6 +125,11 @@ OPENCLAW_ENV_FILE="$ENV_OK" OPENCLAW_CONFIG_TARGET="$TARGET" OPENCLAW_BACKUP_DIR
 
 jq -er '.agents.defaults.model.primary == "openai-codex/gpt-5.3-codex"' "$TARGET" >/dev/null || {
   echo "[test-config] expected default openai-codex primary model" >&2
+  exit 1
+}
+
+jq -er '.agents.defaults.models["openai-codex/gpt-5.3-codex"].params.tools[0].type == "web_search_preview"' "$TARGET" >/dev/null || {
+  echo "[test-config] expected openai model params to be injected" >&2
   exit 1
 }
 
@@ -244,7 +250,26 @@ jq -er '.skills.entries["tavily-search"].env.TAVILY_API_KEY == "test-tavily-key"
   exit 1
 }
 
-echo "[test-config] case6: invalid llm mode should fail"
+echo "[test-config] case6: switching to disabled web_search should keep provider string and clear apiKey"
+OPENCLAW_ENV_FILE="$ENV_OK" OPENCLAW_CONFIG_TARGET="$TARGET" OPENCLAW_BACKUP_DIR="$BACKUP_DIR" \
+  bash "$ROOT_DIR/scripts/sync-config.sh" >/dev/null
+
+jq -er '.tools.web.search.enabled == false' "$TARGET" >/dev/null || {
+  echo "[test-config] expected web_search disabled after switching off brave mode" >&2
+  exit 1
+}
+
+jq -er '.tools.web.search.provider == "brave"' "$TARGET" >/dev/null || {
+  echo "[test-config] expected web_search provider to remain brave for schema compatibility when disabled" >&2
+  exit 1
+}
+
+jq -er '.tools.web.search.apiKey == ""' "$TARGET" >/dev/null || {
+  echo "[test-config] expected web_search apiKey to be empty string when disabled" >&2
+  exit 1
+}
+
+echo "[test-config] case7: invalid llm mode should fail"
 if OPENCLAW_ENV_FILE="$ENV_INVALID" OPENCLAW_CONFIG_TARGET="$TARGET" OPENCLAW_BACKUP_DIR="$BACKUP_DIR" \
   bash "$ROOT_DIR/scripts/sync-config.sh" >/dev/null 2>&1; then
   echo "[test-config] expected invalid llm mode failure but got success" >&2
