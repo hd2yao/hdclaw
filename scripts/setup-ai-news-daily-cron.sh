@@ -50,7 +50,7 @@ set -a
 source "$ENV_FILE"
 set +a
 
-: "${AI_NEWS_OBSIDIAN_DIR:=/Users/dysania/program/documents/obsidian_vault/news/daily}"
+: "${AI_NEWS_OBSIDIAN_DIR:=$HOME/obsidian/news/daily}"
 : "${AI_NEWS_AGENT_ID:=main}"
 : "${AI_NEWS_TZ:=Asia/Shanghai}"
 : "${AI_NEWS_CRON:=30 8 * * *}"
@@ -58,6 +58,8 @@ set +a
 : "${AI_NEWS_FALLBACK_HOURS:=48}"
 : "${AI_NEWS_TOP_N:=10}"
 : "${AI_NEWS_PICK_N:=3}"
+: "${AI_NEWS_TIMEOUT_SECONDS:=900}"
+CRON_SESSION_TARGET="main"
 
 require_non_empty() {
   local key="$1"
@@ -72,6 +74,12 @@ require_non_empty "AI_NEWS_TELEGRAM_TARGET" "${AI_NEWS_TELEGRAM_TARGET:-}"
 require_non_empty "AI_NEWS_AGENT_ID" "$AI_NEWS_AGENT_ID"
 require_non_empty "AI_NEWS_CRON" "$AI_NEWS_CRON"
 require_non_empty "AI_NEWS_TZ" "$AI_NEWS_TZ"
+require_non_empty "AI_NEWS_TIMEOUT_SECONDS" "$AI_NEWS_TIMEOUT_SECONDS"
+
+if ! [[ "$AI_NEWS_TIMEOUT_SECONDS" =~ ^[0-9]+$ ]] || (( AI_NEWS_TIMEOUT_SECONDS < 30 )); then
+  echo "[setup-ai-news-daily] AI_NEWS_TIMEOUT_SECONDS must be integer >= 30" >&2
+  exit 1
+fi
 
 if [[ "${AI_NEWS_TELEGRAM_TARGET}" == "TODO_SET_CHAT_ID" ]]; then
   echo "[setup-ai-news-daily] AI_NEWS_TELEGRAM_TARGET is placeholder, set real chat id/username" >&2
@@ -81,7 +89,8 @@ fi
 mkdir -p "$AI_NEWS_OBSIDIAN_DIR"
 
 if command -v envsubst >/dev/null; then
-  RENDERED_MESSAGE="$(envsubst < "$TEMPLATE_PATH")"
+  env_vars='${AI_NEWS_OBSIDIAN_DIR} ${AI_NEWS_TELEGRAM_TARGET} ${AI_NEWS_AGENT_ID} ${AI_NEWS_TZ} ${AI_NEWS_LOOKBACK_HOURS} ${AI_NEWS_FALLBACK_HOURS} ${AI_NEWS_TOP_N} ${AI_NEWS_PICK_N}'
+  RENDERED_MESSAGE="$(envsubst "$env_vars" < "$TEMPLATE_PATH")"
 else
   echo "[setup-ai-news-daily] envsubst not found; using bash substitutions" >&2
   RENDERED_MESSAGE="$(cat "$TEMPLATE_PATH")"
@@ -102,34 +111,33 @@ if $DRY_RUN; then
   echo "  agent_id=$AI_NEWS_AGENT_ID"
   echo "  cron=$AI_NEWS_CRON"
   echo "  tz=$AI_NEWS_TZ"
+  echo "  timeout_seconds=$AI_NEWS_TIMEOUT_SECONDS"
   echo "  obsidian_dir=$AI_NEWS_OBSIDIAN_DIR"
   echo "  telegram_target=$AI_NEWS_TELEGRAM_TARGET"
+  echo "  session_target=$CRON_SESSION_TARGET"
+  echo "  payload_kind=systemEvent"
   exit 0
 fi
 
 existing_id="$(openclaw cron list --json | jq -r --arg name "$JOB_NAME" '.jobs[]? | select(.name==$name) | .id' | head -n1)"
 
 if [[ -n "$existing_id" ]]; then
-  openclaw cron edit "$existing_id" \
-    --name "$JOB_NAME" \
-    --agent "$AI_NEWS_AGENT_ID" \
-    --session isolated \
-    --cron "$AI_NEWS_CRON" \
-    --tz "$AI_NEWS_TZ" \
-    --message "$RENDERED_MESSAGE" >/dev/null
-  job_id="$existing_id"
-  action="updated"
+  openclaw cron rm "$existing_id" >/dev/null
+  action="recreated"
 else
-  openclaw cron add \
-    --name "$JOB_NAME" \
-    --agent "$AI_NEWS_AGENT_ID" \
-    --session isolated \
-    --cron "$AI_NEWS_CRON" \
-    --tz "$AI_NEWS_TZ" \
-    --message "$RENDERED_MESSAGE" \
-    --json >/dev/null
   action="created"
 fi
+
+openclaw cron add \
+  --name "$JOB_NAME" \
+  --agent "$AI_NEWS_AGENT_ID" \
+  --session "$CRON_SESSION_TARGET" \
+  --expect-final \
+  --timeout-seconds "$AI_NEWS_TIMEOUT_SECONDS" \
+  --cron "$AI_NEWS_CRON" \
+  --tz "$AI_NEWS_TZ" \
+  --system-event "$RENDERED_MESSAGE" \
+  --json >/dev/null
 
 job_id="$(openclaw cron list --json | jq -r --arg name "$JOB_NAME" '.jobs[]? | select(.name==$name) | .id' | head -n1)"
 

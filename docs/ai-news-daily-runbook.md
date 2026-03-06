@@ -23,6 +23,7 @@ AI_NEWS_LOOKBACK_HOURS=24
 AI_NEWS_FALLBACK_HOURS=48
 AI_NEWS_TOP_N=10
 AI_NEWS_PICK_N=3
+AI_NEWS_TIMEOUT_SECONDS=900
 ```
 
 2. Gateway 正常运行：
@@ -50,6 +51,10 @@ make run-ai-news-daily-now
 
 - Obsidian 文件生成：
   - `${AI_NEWS_OBSIDIAN_DIR}/YYYY-MM-DD-ai-hotspots.md`
+- 调度执行保障：
+  - cron job 固定为 `main session + systemEvent + expect-final + 900s timeout`
+  - systemEvent 仅执行一条命令：`bash /Users/dysania/program/openclaw/scripts/run-ai-news-daily-pipeline.sh`
+  - 避免长提示词在提醒模式下只返回文本而不执行命令
 - Cron 状态：
 
 ```bash
