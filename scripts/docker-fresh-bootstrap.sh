@@ -149,6 +149,8 @@ verify_state() {
     set -e
     openclaw config get tools.exec --json
     openclaw config get tools.elevated --json
+    python3 --version
+    pip3 --version
     command -v sudo >/dev/null 2>&1 && sudo -n whoami
     ls -ld /home/node/.openclaw/workspace/obsidian_vault
   '

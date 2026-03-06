@@ -59,6 +59,7 @@ OPENCLAW_SKIP_BUILD=1 make docker-fresh-bootstrap
 5. 启动 node host，并输出 `node.list` 状态
 6. 验证：
    - `sudo -n whoami`
+   - `python3 --version` / `pip3 --version`
    - `tools.exec` / `tools.elevated`
    - `obsidian_vault` 挂载路径可见
 
@@ -90,6 +91,8 @@ make docker-shell
 openclaw gateway health --json
 openclaw config get tools.exec --json
 openclaw config get tools.elevated --json
+python3 --version
+pip3 --version
 sudo -n whoami
 ls -la /home/node/.openclaw/workspace/obsidian_vault | head
 ```
@@ -138,7 +141,11 @@ openclaw doctor
    - 原因：只在运行中手工安装，未写入镜像
    - 修复：已持久化到 `containers/openclaw-fresh/Dockerfile`
 
-8. Telegram 群里 `@bot` 没反应，但私聊正常
+8. `python3: not found`（抓取脚本偶发又报缺 Python）
+   - 原因：之前是运行时手工 `apt install`，容器一旦 `recreate` 就会丢
+   - 修复：已把 `python3`/`python3-pip` 固化到 `containers/openclaw-fresh/Dockerfile`，重建镜像后长期生效
+
+9. Telegram 群里 `@bot` 没反应，但私聊正常
    - 现象：`openclaw channels status --probe` 显示 Telegram 正常，但群里 `@bot` 无回复
    - 典型原因：
      - Docker 实例的 `channels.telegram.groupPolicy=allowlist`，但没有配置 `groupAllowFrom` / `allowFrom`

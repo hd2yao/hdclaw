@@ -19,9 +19,12 @@ RUN curl -fsSL --proto '=https' --tlsv1.2 https://openclaw.ai/install.sh \
 RUN mkdir -p /home/node/.openclaw /home/node/workspace \
   && chown -R node:node /home/node
 
-# Install sudo in a separate layer so the OpenClaw install layer can stay cached.
+# Install runtime toolchain in a separate layer so the OpenClaw install layer can stay cached.
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends sudo \
+  && apt-get install -y --no-install-recommends \
+    sudo \
+    python3 \
+    python3-pip \
   && rm -rf /var/lib/apt/lists/*
 
 # Allow the default runtime user to elevate without interactive password prompts.
