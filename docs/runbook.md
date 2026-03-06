@@ -89,6 +89,15 @@ make status
 openclaw health
 ```
 
+## Telegram 绑定
+完整流程见 `docs/telegram-binding.md`。
+
+当前这套配置的关键点：
+
+1. 私聊默认走 `pairing`
+2. 群聊默认是 `allowlist`
+3. `make sync` 不管理 Telegram token，绑定入口是 `openclaw channels add --channel telegram --token ...`
+
 ## 故障排查
 ```bash
 make doctor
