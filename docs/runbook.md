@@ -68,6 +68,31 @@ node scripts/sglang-toolcall-adapter.mjs
 5. 运行 adapter 验证脚本：`make test-adapter`。
 6. 需要压测时运行：`bash tests/adapter/latency-benchmark.sh`。
 
+## SGLang adapter 服务模板（macOS launchd）
+1. 安装后台服务：
+```bash
+SGLANG_UPSTREAM_BASE_URL=http://192.168.6.230:30000/v1 \
+SGLANG_ADAPTER_HOST=127.0.0.1 \
+SGLANG_ADAPTER_PORT=31001 \
+bash scripts/install-sglang-adapter-service.sh
+```
+2. 只渲染 plist、不注册系统服务：
+```bash
+OPENCLAW_SKIP_LAUNCHCTL=1 bash scripts/install-sglang-adapter-service.sh
+```
+3. 卸载：
+```bash
+bash scripts/uninstall-sglang-adapter-service.sh
+```
+4. 模板位置：
+   - `templates/launchd/ai.openclaw.sglang-adapter.plist.template`
+5. 关键可覆盖变量：
+   - `SGLANG_UPSTREAM_BASE_URL`
+   - `SGLANG_ADAPTER_HOST`
+   - `SGLANG_ADAPTER_PORT`
+   - `SGLANG_ADAPTER_WORKDIR`
+   - `OPENCLAW_SKIP_LAUNCHCTL`
+
 ## adapter 回滚
 1. 前台运行场景（临时回滚到 legacy）：
 ```bash

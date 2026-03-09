@@ -211,6 +211,27 @@ make sync
 make restart
 ```
 
+如需把 adapter 做成可复用的 macOS 后台服务，可直接安装仓库内模板：
+
+```bash
+SGLANG_UPSTREAM_BASE_URL=http://192.168.6.230:30000/v1 \
+SGLANG_ADAPTER_HOST=127.0.0.1 \
+SGLANG_ADAPTER_PORT=31001 \
+bash scripts/install-sglang-adapter-service.sh
+```
+
+卸载：
+
+```bash
+bash scripts/uninstall-sglang-adapter-service.sh
+```
+
+如果只想渲染 plist 而不注册 `launchd`，可加：
+
+```bash
+OPENCLAW_SKIP_LAUNCHCTL=1
+```
+
 验证 adapter 流式与兼容行为：
 
 ```bash
