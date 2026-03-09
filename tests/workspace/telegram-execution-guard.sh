@@ -40,6 +40,16 @@ grep -q "openclaw-active-task.sh status" "$WORKSPACE_DIR/AGENTS.md" || {
   exit 1
 }
 
+grep -q "已开工，我会按这个方案直接落地并启用" "$WORKSPACE_DIR/AGENTS.md" || {
+  echo "[test-workspace-guards] expected concrete forbidden promise-only example" >&2
+  exit 1
+}
+
+grep -q "A reply that claims execution started is invalid unless this turn already contains both" "$WORKSPACE_DIR/AGENTS.md" || {
+  echo "[test-workspace-guards] expected explicit execution receipt rule" >&2
+  exit 1
+}
+
 before="$(shasum "$WORKSPACE_DIR/AGENTS.md" | awk '{print $1}')"
 bash "$SCRIPT_PATH" "$WORKSPACE_DIR" >/dev/null
 after="$(shasum "$WORKSPACE_DIR/AGENTS.md" | awk '{print $1}')"
