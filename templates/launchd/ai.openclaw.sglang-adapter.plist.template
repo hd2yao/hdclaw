@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>ai.openclaw.sglang-adapter</string>
+
+    <key>ProgramArguments</key>
+    <array>
+      <string>__NODE_PATH__</string>
+      <string>__SCRIPT_PATH__</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>SGLANG_UPSTREAM_BASE_URL</key>
+      <string>__UPSTREAM_BASE_URL__</string>
+      <key>SGLANG_ADAPTER_HOST</key>
+      <string>__ADAPTER_HOST__</string>
+      <key>SGLANG_ADAPTER_PORT</key>
+      <string>__ADAPTER_PORT__</string>
+      <key>SGLANG_ADAPTER_STREAM_MODE</key>
+      <string>__STREAM_MODE__</string>
+      <key>SGLANG_ADAPTER_STREAM_FALLBACK</key>
+      <string>__STREAM_FALLBACK__</string>
+    </dict>
+
+    <key>WorkingDirectory</key>
+    <string>__WORKDIR__</string>
+
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>__STDOUT_PATH__</string>
+    <key>StandardErrorPath</key>
+    <string>__STDERR_PATH__</string>
+  </dict>
+</plist>

@@ -2,7 +2,7 @@ SHELL := /bin/bash
 DOCKER_STACK ?= openclaw-fresh
 DOCKER_COMPOSE := docker compose -f containers/$(DOCKER_STACK)/docker-compose.yml
 
-.PHONY: bootstrap sync sync-workspace-guards install-skills verify doctor start restart status test-config test-skills test-keyless-search test-tavily-search test-search-router test-no-brave-search test-adapter test-workspace-guards test-active-task setup-ai-news-daily run-ai-news-daily-now run-web-query test-ai-news-daily docker-build docker-up docker-down docker-shell docker-logs docker-init docker-onboard docker-gateway-start docker-gateway-status docker-fresh-bootstrap
+.PHONY: bootstrap sync sync-workspace-guards install-skills verify doctor start restart status test-config test-skills test-keyless-search test-tavily-search test-search-router test-no-brave-search test-adapter test-adapter-service test-workspace-guards test-active-task setup-ai-news-daily run-ai-news-daily-now run-web-query test-ai-news-daily docker-build docker-up docker-down docker-shell docker-logs docker-init docker-onboard docker-gateway-start docker-gateway-status docker-fresh-bootstrap
 
 bootstrap:
 	bash scripts/bootstrap.sh
@@ -52,6 +52,10 @@ test-adapter:
 	bash tests/adapter/streaming-contract.sh
 	bash tests/adapter/toolcall-transform-stream.sh
 	bash tests/adapter/fallback-behavior.sh
+	bash tests/adapter/launchd-service-template.sh
+
+test-adapter-service:
+	bash tests/adapter/launchd-service-template.sh
 
 test-workspace-guards:
 	bash tests/workspace/telegram-execution-guard.sh
