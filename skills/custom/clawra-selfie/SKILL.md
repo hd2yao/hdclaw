@@ -11,6 +11,7 @@ Generate an image from a user prompt and send it via OpenClaw channels.
 ## Execution Rule (Important)
 
 - Always use `scripts/clawra-selfie.sh` (or `scripts/clawra-selfie.ts`) as the single entrypoint.
+- Resolve the script path from the skill directory. Do not assume the current working directory contains `scripts/`.
 - Do not call provider APIs directly with `curl` in normal flow.
 - Provider selection must follow environment config (`CLAWRA_IMAGE_PROVIDER`) instead of hardcoding fal/openai.
 
@@ -24,13 +25,21 @@ Generate an image from a user prompt and send it via OpenClaw channels.
 ## Command
 
 ```bash
-bash scripts/clawra-selfie.sh "<prompt>" "<platform>" "<target>" "<caption>"
+SKILL_DIR="${OPENCLAW_CLAWRA_SELFIE_DIR:-$HOME/.openclaw/workspace/skills/custom/clawra-selfie}"
+if [[ ! -f "$SKILL_DIR/scripts/clawra-selfie.sh" ]]; then
+  SKILL_DIR="$HOME/.openclaw/skills/clawra-selfie"
+fi
+bash "$SKILL_DIR/scripts/clawra-selfie.sh" "<prompt>" "<platform>" "<target>" "<caption>"
 ```
 
 Equivalent direct command:
 
 ```bash
-npx ts-node scripts/clawra-selfie.ts "<prompt>" <platform> <target> [caption]
+SKILL_DIR="${OPENCLAW_CLAWRA_SELFIE_DIR:-$HOME/.openclaw/workspace/skills/custom/clawra-selfie}"
+if [[ ! -f "$SKILL_DIR/scripts/clawra-selfie.ts" ]]; then
+  SKILL_DIR="$HOME/.openclaw/skills/clawra-selfie"
+fi
+npx ts-node "$SKILL_DIR/scripts/clawra-selfie.ts" "<prompt>" <platform> <target> [caption]
 ```
 
 ## Provider Behavior

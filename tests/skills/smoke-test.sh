@@ -6,6 +6,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 echo "[test-skills] installing enabled local skills (online disabled)"
 INSTALL_ONLINE=false bash "$ROOT_DIR/scripts/install-skills.sh"
 
+echo "[test-skills] checking clawra-selfie wrapper path resolution"
+bash "$ROOT_DIR/tests/skills/clawra-selfie-path-resolution.sh"
+
 echo "[test-skills] checking enabled skill info"
 ruby -ryaml -e '
   c = YAML.load_file(ARGV[0]) || {}
