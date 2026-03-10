@@ -18,6 +18,9 @@ SERVICE="${OPENCLAW_DOCKER_SERVICE:-openclaw}"
 DASHBOARD_PORT="${OPENCLAW_DASHBOARD_PORT:-18790}"
 TELEGRAM_ALLOW_FROM="${OPENCLAW_TELEGRAM_ALLOW_FROM:-}"
 SKIP_BUILD="${OPENCLAW_SKIP_BUILD:-0}"
+LOCAL_BASE_URL="${OPENCLAW_LOCAL_BASE_URL:-http://192.168.6.230:30000/v1}"
+LOCAL_TOOLCALL_ADAPTER="${OPENCLAW_LOCAL_TOOLCALL_ADAPTER:-sglang}"
+LOCAL_TOOLCALL_ADAPTER_BASE_URL="${OPENCLAW_LOCAL_TOOLCALL_ADAPTER_BASE_URL:-http://127.0.0.1:31001/v1}"
 LOCAL_MODEL_PARAMS_JSON="${OPENCLAW_LOCAL_MODEL_PARAMS_JSON:-}"
 if [[ -z "$LOCAL_MODEL_PARAMS_JSON" ]]; then
   LOCAL_MODEL_PARAMS_JSON='{"chat_template_kwargs":{"enable_thinking":false}}'
@@ -148,6 +151,38 @@ NODE
     openclaw config validate >/dev/null"
 }
 
+configure_local_provider_connection() {
+  log "configuring local provider connection"
+  compose exec -T "$SERVICE" sh -lc "set -e
+    LOCAL_BASE_URL='$LOCAL_BASE_URL' \
+    LOCAL_TOOLCALL_ADAPTER='$LOCAL_TOOLCALL_ADAPTER' \
+    LOCAL_TOOLCALL_ADAPTER_BASE_URL='$LOCAL_TOOLCALL_ADAPTER_BASE_URL' \
+    node - <<'NODE'
+const fs = require('fs');
+
+const configPath = '/home/node/.openclaw/openclaw.json';
+const localBaseUrl = process.env.LOCAL_BASE_URL || '';
+const adapterMode = process.env.LOCAL_TOOLCALL_ADAPTER || 'sglang';
+const adapterBaseUrl = process.env.LOCAL_TOOLCALL_ADAPTER_BASE_URL || '';
+const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+const provider = config?.models?.providers?.local;
+
+if (!provider || typeof provider !== 'object') {
+  console.log('[docker-fresh-bootstrap] local provider not configured; skip provider baseUrl');
+  process.exit(0);
+}
+
+provider.baseUrl = adapterMode === 'sglang' ? adapterBaseUrl : localBaseUrl;
+
+fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+console.log(JSON.stringify({
+  adapterMode,
+  providerBaseUrl: provider.baseUrl,
+}, null, 2));
+NODE
+    openclaw config validate >/dev/null"
+}
+
 configure_exec_approvals() {
   log "setting exec approvals to full/off"
   compose exec -T "$SERVICE" sh -lc '
@@ -205,7 +240,10 @@ PY
 start_node_host() {
   log "starting node host"
   compose exec -T "$SERVICE" sh -lc '
-    pkill -f "openclaw node run --host 127.0.0.1 --port 18789" >/dev/null 2>&1 || true
+    pids="$(ps -ef | grep "[o]penclaw node run --host 127.0.0.1 --port 18789" | awk "{print \$2}")"
+    if [ -n "$pids" ]; then
+      echo "$pids" | xargs -r kill
+    fi
     nohup openclaw node run --host 127.0.0.1 --port 18789 >> /home/node/.openclaw/node.log 2>&1 &
   '
   sleep 2
@@ -216,9 +254,16 @@ verify_state() {
   log "verifying final state"
   compose exec -T "$SERVICE" sh -lc '
     set -e
+    if [ "${OPENCLAW_LOCAL_TOOLCALL_ADAPTER:-sglang}" = "sglang" ]; then
+      curl -fsS "${OPENCLAW_LOCAL_TOOLCALL_ADAPTER_BASE_URL:-http://127.0.0.1:31001/v1}/models" >/tmp/openclaw-adapter-models.json
+    fi
     openclaw config get tools.exec --json
     openclaw config get tools.elevated --json
+    openclaw config get models.providers.local --json
     openclaw config get agents.defaults.models --json
+    if [ -f /tmp/openclaw-adapter-models.json ]; then
+      cat /tmp/openclaw-adapter-models.json
+    fi
     python3 --version
     pip3 --version
     command -v sudo >/dev/null 2>&1 && sudo -n whoami
@@ -248,6 +293,7 @@ main() {
   wait_gateway >/dev/null
 
   configure_openclaw
+  configure_local_provider_connection
   configure_local_model_params
   configure_exec_approvals
   ensure_weixin_read_runtime

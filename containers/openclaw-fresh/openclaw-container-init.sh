@@ -5,6 +5,16 @@ OPENCLAW_HOME="${OPENCLAW_HOME:-$HOME/.openclaw}"
 OPENCLAW_CONFIG="${OPENCLAW_CONFIG_PATH:-$OPENCLAW_HOME/openclaw.json}"
 DASHBOARD_PORT="${OPENCLAW_DASHBOARD_PORT:-18790}"
 CHANNEL_PLUGINS_RAW="${OPENCLAW_DOCKER_CHANNEL_PLUGINS:-telegram,whatsapp}"
+LOCAL_BASE_URL="${OPENCLAW_LOCAL_BASE_URL:-http://192.168.6.230:30000/v1}"
+LOCAL_TOOLCALL_ADAPTER="${OPENCLAW_LOCAL_TOOLCALL_ADAPTER:-sglang}"
+LOCAL_TOOLCALL_ADAPTER_BASE_URL="${OPENCLAW_LOCAL_TOOLCALL_ADAPTER_BASE_URL:-http://127.0.0.1:31001/v1}"
+SGLANG_UPSTREAM_BASE_URL="${SGLANG_UPSTREAM_BASE_URL:-$LOCAL_BASE_URL}"
+SGLANG_ADAPTER_HOST="${SGLANG_ADAPTER_HOST:-127.0.0.1}"
+SGLANG_ADAPTER_PORT="${SGLANG_ADAPTER_PORT:-31001}"
+SGLANG_ADAPTER_STREAM_MODE="${SGLANG_ADAPTER_STREAM_MODE:-proxy}"
+SGLANG_ADAPTER_STREAM_FALLBACK="${SGLANG_ADAPTER_STREAM_FALLBACK:-on}"
+SGLANG_ADAPTER_SCRIPT="${SGLANG_ADAPTER_SCRIPT:-/usr/local/lib/openclaw/sglang-toolcall-adapter.mjs}"
+SGLANG_ADAPTER_LOG="${SGLANG_ADAPTER_LOG:-$OPENCLAW_HOME/sglang-adapter.log}"
 
 if ! command -v openclaw >/dev/null 2>&1; then
   echo "[docker-init] missing required command: openclaw" >&2
@@ -14,6 +24,45 @@ fi
 mkdir -p "$OPENCLAW_HOME"
 
 echo "[docker-init] OpenClaw home: $OPENCLAW_HOME"
+
+start_sglang_adapter() {
+  if [[ "$LOCAL_TOOLCALL_ADAPTER" != "sglang" ]]; then
+    echo "[docker-init] local toolcall adapter disabled: $LOCAL_TOOLCALL_ADAPTER"
+    return 0
+  fi
+
+  if [[ ! -f "$SGLANG_ADAPTER_SCRIPT" ]]; then
+    echo "[docker-init] missing adapter script: $SGLANG_ADAPTER_SCRIPT" >&2
+    return 1
+  fi
+
+  local health_url="${LOCAL_TOOLCALL_ADAPTER_BASE_URL%/}/models"
+  if curl -fsS "$health_url" >/dev/null 2>&1; then
+    echo "[docker-init] sglang adapter already healthy: $health_url"
+    return 0
+  fi
+
+  echo "[docker-init] starting sglang adapter -> $health_url (upstream: $SGLANG_UPSTREAM_BASE_URL)"
+  pkill -f "$SGLANG_ADAPTER_SCRIPT" >/dev/null 2>&1 || true
+  nohup env \
+    SGLANG_UPSTREAM_BASE_URL="$SGLANG_UPSTREAM_BASE_URL" \
+    SGLANG_ADAPTER_HOST="$SGLANG_ADAPTER_HOST" \
+    SGLANG_ADAPTER_PORT="$SGLANG_ADAPTER_PORT" \
+    SGLANG_ADAPTER_STREAM_MODE="$SGLANG_ADAPTER_STREAM_MODE" \
+    SGLANG_ADAPTER_STREAM_FALLBACK="$SGLANG_ADAPTER_STREAM_FALLBACK" \
+    node "$SGLANG_ADAPTER_SCRIPT" >"$SGLANG_ADAPTER_LOG" 2>&1 &
+
+  for i in $(seq 1 20); do
+    if curl -fsS "$health_url" >/dev/null 2>&1; then
+      echo "[docker-init] sglang adapter healthy"
+      return 0
+    fi
+    sleep 1
+  done
+
+  echo "[docker-init] sglang adapter failed to become healthy; log: $SGLANG_ADAPTER_LOG" >&2
+  return 1
+}
 
 if [[ ! -f "$OPENCLAW_CONFIG" ]]; then
   echo "[docker-init] fresh instance detected (no config file yet)"
@@ -65,6 +114,8 @@ else
     done
   fi
 fi
+
+start_sglang_adapter
 
 if [[ "${OPENCLAW_DOCKER_GATEWAY:-false}" == "true" ]]; then
   if openclaw gateway health >/dev/null 2>&1; then

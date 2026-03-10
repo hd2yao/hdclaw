@@ -3,8 +3,8 @@ name: openclaw-fresh
 services:
   openclaw:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ../..
+      dockerfile: containers/openclaw-fresh/Dockerfile
     working_dir: /home/node/workspace
     stdin_open: true
     tty: true
@@ -22,6 +22,14 @@ services:
       OPENCLAW_DOCKER_ENABLE_CHANNEL_PLUGINS: "${OPENCLAW_DOCKER_ENABLE_CHANNEL_PLUGINS:-true}"
       OPENCLAW_DOCKER_CHANNEL_PLUGINS: "${OPENCLAW_DOCKER_CHANNEL_PLUGINS:-telegram,whatsapp}"
       OPENCLAW_DASHBOARD_PORT: "${OPENCLAW_DASHBOARD_PORT:-18790}"
+      OPENCLAW_LOCAL_BASE_URL: "${OPENCLAW_LOCAL_BASE_URL:-http://192.168.6.230:30000/v1}"
+      OPENCLAW_LOCAL_TOOLCALL_ADAPTER: "${OPENCLAW_LOCAL_TOOLCALL_ADAPTER:-sglang}"
+      OPENCLAW_LOCAL_TOOLCALL_ADAPTER_BASE_URL: "${OPENCLAW_LOCAL_TOOLCALL_ADAPTER_BASE_URL:-http://127.0.0.1:31001/v1}"
+      SGLANG_UPSTREAM_BASE_URL: "${SGLANG_UPSTREAM_BASE_URL:-http://192.168.6.230:30000/v1}"
+      SGLANG_ADAPTER_HOST: "${SGLANG_ADAPTER_HOST:-127.0.0.1}"
+      SGLANG_ADAPTER_PORT: "${SGLANG_ADAPTER_PORT:-31001}"
+      SGLANG_ADAPTER_STREAM_MODE: "${SGLANG_ADAPTER_STREAM_MODE:-proxy}"
+      SGLANG_ADAPTER_STREAM_FALLBACK: "${SGLANG_ADAPTER_STREAM_FALLBACK:-on}"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     command: ["bash", "-lc", "openclaw-container-init && tail -f /dev/null"]
