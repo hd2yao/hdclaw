@@ -63,7 +63,30 @@ OPENCLAW_SKIP_BUILD=1 make docker-fresh-bootstrap
    - `sudo -n whoami`
    - `python3 --version` / `pip3 --version`
    - `tools.exec` / `tools.elevated`
+   - 本地 qwen 模型参数中已写入 `chat_template_kwargs.enable_thinking=false`
    - `obsidian_vault` 挂载路径可见
+
+默认情况下，fresh docker bootstrap 会为 `models.providers.local` 的第一个模型写入：
+
+```json
+{
+  "chat_template_kwargs": {
+    "enable_thinking": false
+  }
+}
+```
+
+原因：
+
+- 你当前上游 `http://192.168.6.230:30000/v1` 在 `enable_thinking=true` 时，经常长时间只输出 `reasoning_content`
+- Telegram 通道里这会表现成“bot 收到消息，但正文为空，最终没有回复”
+- 关闭 thinking 后，同一问题可以稳定直接产出正文
+
+如需覆盖默认值，可在 `.env.local` 中显式设置：
+
+```bash
+OPENCLAW_LOCAL_MODEL_PARAMS_JSON='{"chat_template_kwargs":{"enable_thinking":false}}'
+```
 
 ## 4. 容器与目录映射
 

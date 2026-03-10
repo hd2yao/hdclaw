@@ -18,6 +18,10 @@ SERVICE="${OPENCLAW_DOCKER_SERVICE:-openclaw}"
 DASHBOARD_PORT="${OPENCLAW_DASHBOARD_PORT:-18790}"
 TELEGRAM_ALLOW_FROM="${OPENCLAW_TELEGRAM_ALLOW_FROM:-}"
 SKIP_BUILD="${OPENCLAW_SKIP_BUILD:-0}"
+LOCAL_MODEL_PARAMS_JSON="${OPENCLAW_LOCAL_MODEL_PARAMS_JSON:-}"
+if [[ -z "$LOCAL_MODEL_PARAMS_JSON" ]]; then
+  LOCAL_MODEL_PARAMS_JSON='{"chat_template_kwargs":{"enable_thinking":false}}'
+fi
 
 need_cmd() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -108,6 +112,42 @@ configure_openclaw() {
   '
 }
 
+configure_local_model_params() {
+  log "ensuring local qwen model params"
+  compose exec -T "$SERVICE" sh -lc "set -e
+    LOCAL_MODEL_PARAMS_JSON='$LOCAL_MODEL_PARAMS_JSON' node - <<'NODE'
+const fs = require('fs');
+
+const configPath = '/home/node/.openclaw/openclaw.json';
+const raw = process.env.LOCAL_MODEL_PARAMS_JSON || '';
+const params = JSON.parse(raw);
+const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+const provider = config?.models?.providers?.local;
+
+if (!provider || !Array.isArray(provider.models) || provider.models.length === 0) {
+  console.log('[docker-fresh-bootstrap] local provider not configured; skip local model params');
+  process.exit(0);
+}
+
+const modelId = provider.models[0]?.id;
+if (!modelId) {
+  console.log('[docker-fresh-bootstrap] local model id missing; skip local model params');
+  process.exit(0);
+}
+
+const modelKey = 'local/' + modelId;
+config.agents ||= {};
+config.agents.defaults ||= {};
+config.agents.defaults.models ||= {};
+config.agents.defaults.models[modelKey] ||= {};
+config.agents.defaults.models[modelKey].params = params;
+
+fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+console.log(JSON.stringify({ modelKey, params }, null, 2));
+NODE
+    openclaw config validate >/dev/null"
+}
+
 configure_exec_approvals() {
   log "setting exec approvals to full/off"
   compose exec -T "$SERVICE" sh -lc '
@@ -178,6 +218,7 @@ verify_state() {
     set -e
     openclaw config get tools.exec --json
     openclaw config get tools.elevated --json
+    openclaw config get agents.defaults.models --json
     python3 --version
     pip3 --version
     command -v sudo >/dev/null 2>&1 && sudo -n whoami
@@ -207,6 +248,7 @@ main() {
   wait_gateway >/dev/null
 
   configure_openclaw
+  configure_local_model_params
   configure_exec_approvals
   ensure_weixin_read_runtime
   ensure_playwright_runtime
