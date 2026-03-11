@@ -5,6 +5,8 @@ OPENCLAW_HOME="${OPENCLAW_HOME:-$HOME/.openclaw}"
 OPENCLAW_CONFIG="${OPENCLAW_CONFIG_PATH:-$OPENCLAW_HOME/openclaw.json}"
 DASHBOARD_PORT="${OPENCLAW_DASHBOARD_PORT:-18790}"
 CHANNEL_PLUGINS_RAW="${OPENCLAW_DOCKER_CHANNEL_PLUGINS:-telegram,whatsapp}"
+TELEGRAM_AUTO_SELECT_FAMILY="${OPENCLAW_DOCKER_TELEGRAM_AUTO_SELECT_FAMILY:-}"
+TELEGRAM_DNS_RESULT_ORDER="${OPENCLAW_DOCKER_TELEGRAM_DNS_RESULT_ORDER:-}"
 LOCAL_BASE_URL="${OPENCLAW_LOCAL_BASE_URL:-http://192.168.6.230:30000/v1}"
 LOCAL_TOOLCALL_ADAPTER="${OPENCLAW_LOCAL_TOOLCALL_ADAPTER:-sglang}"
 LOCAL_TOOLCALL_ADAPTER_BASE_URL="${OPENCLAW_LOCAL_TOOLCALL_ADAPTER_BASE_URL:-http://127.0.0.1:31001/v1}"
@@ -85,10 +87,39 @@ else
   if ! openclaw config set gateway.bind lan >/dev/null 2>&1; then
     echo "[docker-init] warning: failed to set gateway.bind=lan"
   fi
-  # Allow both host-mapped and in-container Control UI origins.
-  allowed_origins_json="[\"http://localhost:${DASHBOARD_PORT}\",\"http://127.0.0.1:${DASHBOARD_PORT}\",\"http://localhost:18789\",\"http://127.0.0.1:18789\"]"
-  if ! openclaw config set gateway.controlUi.allowedOrigins "$allowed_origins_json" --strict-json >/dev/null 2>&1; then
-    echo "[docker-init] warning: failed to set gateway.controlUi.allowedOrigins"
+  # Strings such as dnsResultOrder are easier to patch safely via JSON.
+  if ! OPENCLAW_CONFIG="$OPENCLAW_CONFIG" DASHBOARD_PORT="$DASHBOARD_PORT" TELEGRAM_AUTO_SELECT_FAMILY="$TELEGRAM_AUTO_SELECT_FAMILY" TELEGRAM_DNS_RESULT_ORDER="$TELEGRAM_DNS_RESULT_ORDER" python3 - <<'PY'
+import json
+import os
+
+config_path = os.environ["OPENCLAW_CONFIG"]
+dashboard_port = os.environ["DASHBOARD_PORT"]
+auto_select_family = os.environ.get("TELEGRAM_AUTO_SELECT_FAMILY", "").strip().lower()
+dns_result_order = os.environ.get("TELEGRAM_DNS_RESULT_ORDER", "").strip()
+
+with open(config_path, "r", encoding="utf-8") as fh:
+    config = json.load(fh)
+
+control_ui = config.setdefault("gateway", {}).setdefault("controlUi", {})
+control_ui["allowedOrigins"] = [
+    f"http://localhost:{dashboard_port}",
+    f"http://127.0.0.1:{dashboard_port}",
+    "http://localhost:18789",
+    "http://127.0.0.1:18789",
+]
+
+if auto_select_family:
+    telegram_network = config.setdefault("channels", {}).setdefault("telegram", {}).setdefault("network", {})
+    telegram_network["autoSelectFamily"] = auto_select_family == "true"
+    if dns_result_order:
+        telegram_network["dnsResultOrder"] = dns_result_order
+
+with open(config_path, "w", encoding="utf-8") as fh:
+    json.dump(config, fh, ensure_ascii=False, indent=2)
+    fh.write("\n")
+PY
+  then
+    echo "[docker-init] warning: failed to patch gateway.controlUi/telegram.network"
   fi
   # Docker containers are typically single-operator local environments.
   # Disabling device auth avoids repetitive Control UI pairing prompts.
