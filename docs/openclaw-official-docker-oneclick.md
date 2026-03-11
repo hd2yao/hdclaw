@@ -46,12 +46,20 @@ make docker-official-bootstrap
 
 ```bash
 OPENCLAW_OFFICIAL_IMAGE=ghcr.io/openclaw/openclaw:latest
+OPENCLAW_APT_MIRROR=mirrors.tuna.tsinghua.edu.cn
 ```
 
 例如固定 tag：
 
 ```bash
 OPENCLAW_OFFICIAL_IMAGE=ghcr.io/openclaw/openclaw:2026.3.8 \
+DOCKER_STACK=openclaw-official make docker-build
+```
+
+如果你本地网络对默认 Debian 源不稳定，可以显式覆盖：
+
+```bash
+OPENCLAW_APT_MIRROR=mirrors.tuna.tsinghua.edu.cn \
 DOCKER_STACK=openclaw-official make docker-build
 ```
 
