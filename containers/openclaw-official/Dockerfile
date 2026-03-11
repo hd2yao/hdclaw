@@ -2,8 +2,15 @@ ARG OPENCLAW_OFFICIAL_IMAGE=ghcr.io/openclaw/openclaw:latest
 FROM ${OPENCLAW_OFFICIAL_IMAGE}
 
 ARG DEBIAN_FRONTEND=noninteractive
+ARG OPENCLAW_APT_MIRROR=deb.debian.org
 
 USER root
+
+RUN if [ -f /etc/apt/sources.list.d/debian.sources ]; then \
+      sed -i "s|http://deb.debian.org|https://${OPENCLAW_APT_MIRROR}|g" /etc/apt/sources.list.d/debian.sources; \
+    elif [ -f /etc/apt/sources.list ]; then \
+      sed -i "s|http://deb.debian.org|https://${OPENCLAW_APT_MIRROR}|g" /etc/apt/sources.list; \
+    fi
 
 RUN apt-get update -o Acquire::Retries=3 \
   && apt-get install -y -o Acquire::Retries=3 --no-install-recommends \
