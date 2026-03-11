@@ -17,12 +17,33 @@
   - `sglang-toolcall-adapter.mjs`
   - Obsidian 挂载
 
+## Telegram 轮询稳定性
+
+`openclaw-official` 默认会写入以下 Telegram 网络参数：
+
+- `channels.telegram.network.autoSelectFamily=false`
+- `channels.telegram.network.dnsResultOrder=ipv4first`
+
+这组参数用于降低 Docker 中 Telegram polling 出现 `Polling stall detected` 的概率。
+
 ## 启动
 
 ```bash
 cd /Users/dysania/program/openclaw
 DOCKER_STACK=openclaw-official make docker-build
 DOCKER_STACK=openclaw-official OPENCLAW_DASHBOARD_PORT=18890 make docker-up
+```
+
+Dashboard 端口只绑定到本机回环地址：
+
+- `http://127.0.0.1:18890/`
+- `http://localhost:18890/`
+
+Gateway 在 Docker 中仍会保留 token 认证，所以直接打开裸地址时，浏览器可能会显示 `device identity required` 或 `Disconnected from gateway`。
+正确做法是先输出宿主机可直接打开的 URL：
+
+```bash
+DOCKER_STACK=openclaw-official OPENCLAW_DASHBOARD_PORT=18890 make docker-dashboard-url
 ```
 
 进入容器：
