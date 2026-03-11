@@ -22,6 +22,12 @@ make install-skills
 make verify
 ```
 
+平台安装参考：
+
+- Windows 安装：[`docs/openclaw-windows-install.md`](docs/openclaw-windows-install.md)
+- Docker 全新实例：[`docs/openclaw-fresh-docker-oneclick.md`](docs/openclaw-fresh-docker-oneclick.md)
+- 官方镜像方案：[`docs/openclaw-official-docker-oneclick.md`](docs/openclaw-official-docker-oneclick.md)
+
 ## 常用命令
 ```bash
 make sync
