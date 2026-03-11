@@ -1,246 +1,253 @@
-# Windows 上安装 OpenClaw
+# Windows 本机安装 OpenClaw
 
-这份文档给的是一条能落地、后续也好维护的安装路径。
+这份文档只讲一件事：在原生 Windows 上安装 OpenClaw，不使用 `WSL2`，不需要 `Ubuntu`。
 
-结论先说：
+先说边界：
 
-- 官方当前强烈推荐 `Windows + WSL2`，不要把原生 Windows 当默认方案
-- 如果你后面要维护 skills、Node 工具链、Gateway 服务，`WSL2` 的兼容性明显更稳
-- 原生 `PowerShell` 安装可以做，但官方也明确说过 native Windows 更容易出问题
+- 这条路径是 `PowerShell + native Windows`
+- OpenClaw 官方当前仍然更推荐 `WSL2`
+- 但如果你的目标就是“直接装在 Windows 本机”，下面这套流程是可执行的
 
 官方依据：
 
-- OpenClaw Windows 文档：<https://docs.openclaw.ai/windows>
-- OpenClaw 安装文档：<https://docs.openclaw.ai/zh-CN/install/index>
-- OpenClaw 新手引导：<https://docs.openclaw.ai/zh-CN/start/wizard>
-- Microsoft WSL 安装文档：<https://learn.microsoft.com/en-us/windows/wsl/install>
+- [OpenClaw Windows 文档](https://docs.openclaw.ai/windows)
+- [OpenClaw 安装文档](https://docs.openclaw.ai/zh-CN/install/index)
+- [OpenClaw 新手引导](https://docs.openclaw.ai/zh-CN/start/wizard)
 
-## 推荐方案：WSL2 安装
+## 前置条件
 
-### 1. 在 Windows 里安装 WSL2
+建议环境：
 
-用管理员权限打开 PowerShell，执行：
-
-```powershell
-wsl --install -d Ubuntu
-```
+- Windows 10/11
+- PowerShell
+- 能访问外网下载 OpenClaw 安装脚本
 
 说明：
 
-- 这条命令会安装 `WSL` 和默认的 `Ubuntu`
-- 如果你的机器已经装过 WSL，但没有装发行版，可以先看有哪些可选发行版：
+- 官方安装器会处理 OpenClaw CLI 安装
+- 如果本机没有满足要求的 Node.js，安装器会提示并处理对应依赖
+- 如果后续你要用 `git` 方式安装或管理源码，再额外安装 Git
 
-```powershell
-wsl --list --online
-```
+## 最短安装路径
 
-然后安装指定发行版：
+用 PowerShell 执行下面这几步即可。
 
-```powershell
-wsl --install -d Ubuntu
-```
+### 1. 打开 PowerShell
 
-如果安装过程卡在 `0.0%`，Microsoft 当前给出的兜底命令是：
+建议用“以管理员身份运行”的 PowerShell。
+不是绝对必须，但后面如果要安装/修复 Gateway 服务，会更省事。
 
-```powershell
-wsl --install --web-download -d Ubuntu
-```
-
-安装完成后，重启 Windows。
-
-### 2. 首次进入 Ubuntu
-
-重启后打开 `Ubuntu`，按提示创建 Linux 用户名和密码。
-
-建议先更新系统包：
-
-```bash
-sudo apt update && sudo apt upgrade -y
-```
-
-### 3. 在 WSL2 里安装 OpenClaw
-
-在 Ubuntu 终端里执行：
-
-```bash
-curl -fsSL https://openclaw.ai/install.sh | bash
-```
-
-说明：
-
-- 官方安装器会检查并处理 `Node 22+`
-- 默认会全局安装 `openclaw`，然后进入 onboarding 流程
-
-如果你只想先安装，不想立刻进入 onboarding：
-
-```bash
-curl -fsSL https://openclaw.ai/install.sh | bash -s -- --no-onboard
-```
-
-如需查看安装器参数：
-
-```bash
-curl -fsSL https://openclaw.ai/install.sh | bash -s -- --help
-```
-
-### 4. 运行 OpenClaw 初始化
-
-如果你刚才用了默认安装流程，通常已经会进入引导。
-
-如果没有，就手动执行：
-
-```bash
-openclaw onboard --install-daemon
-```
-
-这个流程会完成几件事：
-
-- 初始化 OpenClaw 配置
-- 安装或修复 Gateway 服务
-- 配置基础 workspace / channel / skills 默认项
-
-如果你后面想重新配置：
-
-```bash
-openclaw configure
-```
-
-### 5. 验证是否安装成功
-
-先看 CLI 是否可用：
-
-```bash
-openclaw --help
-```
-
-再看 Gateway 状态：
-
-```bash
-openclaw gateway status
-```
-
-健康检查：
-
-```bash
-openclaw health
-```
-
-打开控制台 UI：
-
-```bash
-openclaw dashboard
-```
-
-如果一切正常，浏览器里应该能打开控制台。
-
-## 可选：把这个单仓管理仓也放进 WSL2
-
-如果你不仅是“安装 OpenClaw”，还要像当前这个仓库一样统一管理配置、skills 和脚本，建议把仓库也放到 WSL 的 Linux 文件系统里，不要放在 `C:\` 挂载盘下长期开发。
-
-建议路径：
-
-```bash
-mkdir -p ~/program
-cd ~/program
-git clone <your-repo-url> openclaw
-cd openclaw
-```
-
-然后按本仓库流程继续：
-
-```bash
-make bootstrap
-cp .env.example .env.local
-make sync
-make install-skills
-make verify
-```
-
-原因很直接：
-
-- Linux 文件权限和软链行为更稳定
-- skills 里如果依赖 shell / node / python，本地路径兼容性更好
-- 后续维护 `~/.openclaw` 也更接近官方支持路径
-
-## 兜底方案：原生 Windows PowerShell 安装
-
-这条路不是推荐默认值，只适合你明确知道自己要在 native Windows 里跑。
-
-官方 PowerShell 安装命令：
+### 2. 执行官方安装脚本
 
 ```powershell
 iwr -useb https://openclaw.ai/install.ps1 | iex
 ```
 
-如果跳过 onboarding，安装完成后再手动执行：
+这条命令会在 Windows 本机安装 OpenClaw。
+
+如果你只想先安装 CLI，不马上进入引导流程：
 
 ```powershell
-openclaw onboard --install-daemon
+& ([scriptblock]::Create((iwr -useb https://openclaw.ai/install.ps1))) -NoOnboard
 ```
 
-你还可以查看安装器帮助：
+如果你想看安装器支持哪些参数：
 
 ```powershell
 & ([scriptblock]::Create((iwr -useb https://openclaw.ai/install.ps1))) -?
 ```
 
+### 3. 执行初始化
+
+如果安装器没有自动带你进入 onboarding，就手动执行：
+
+```powershell
+openclaw onboard --install-daemon
+```
+
+这一步通常会完成：
+
+- 初始化 `~/.openclaw` 对应的 Windows 用户目录配置
+- 安装或修复 Gateway 后台服务
+- 生成默认 workspace / channel / agent 配置
+
+如果只是想重新走一遍配置向导：
+
+```powershell
+openclaw configure
+```
+
+### 4. 验证安装结果
+
+先确认命令可用：
+
+```powershell
+openclaw --help
+```
+
+再检查 Gateway：
+
+```powershell
+openclaw gateway status
+```
+
+健康检查：
+
+```powershell
+openclaw health
+```
+
+打开控制台：
+
+```powershell
+openclaw dashboard
+```
+
+如果这几步都正常，说明原生 Windows 安装已经完成。
+
+## 推荐安装方式细节
+
+### 方案 A：默认安装器
+
+这是最直接的方式：
+
+```powershell
+iwr -useb https://openclaw.ai/install.ps1 | iex
+```
+
+适合场景：
+
+- 你只想尽快把 OpenClaw 装起来
+- 不关心安装细节
+- 希望后续继续跟着官方升级路径走
+
+### 方案 B：先安装，再手动 onboarding
+
+```powershell
+& ([scriptblock]::Create((iwr -useb https://openclaw.ai/install.ps1))) -NoOnboard
+openclaw onboard --install-daemon
+```
+
+适合场景：
+
+- 你想把“安装 CLI”和“初始化服务”拆开执行
+- 你需要先检查 PATH、代理或权限
+
+### 方案 C：用 Git 方式安装
+
+如果官方安装器参数里启用了 `git` 安装方式，可以这样执行：
+
+```powershell
+& ([scriptblock]::Create((iwr -useb https://openclaw.ai/install.ps1))) -InstallMethod git
+```
+
+如果你想指定源码目录，再加：
+
+```powershell
+& ([scriptblock]::Create((iwr -useb https://openclaw.ai/install.ps1))) -InstallMethod git -GitDir "$env:USERPROFILE\\program\\openclaw-src"
+```
+
+适合场景：
+
+- 你明确知道自己要保留源码安装路径
+- 你后面准备直接跟踪 OpenClaw 上游代码
+
 注意：
 
-- 官方当前仍然推荐 `WSL2`
-- native Windows 在 Node、shell、skills、守护进程和路径兼容性上风险更高
-- 如果你要跑自定义 skills，这条路后面很容易继续补兼容
+- 这条路通常要求本机已经有 `git`
+- 如果你只是普通使用者，不需要优先选这条
 
 ## 常见问题
 
 ### 1. `openclaw` 命令找不到
 
-先检查 Node / npm 的全局路径是否进了 `PATH`。
+先在 PowerShell 里检查：
 
-在 WSL2 里可以检查：
-
-```bash
+```powershell
+where.exe openclaw
 node --version
-npm prefix -g
-echo "$PATH"
 ```
 
-如果是 Windows PowerShell，重点看全局 npm 目录是否在 `PATH` 里。
+如果 `openclaw` 找不到，优先排查全局 npm 路径是否进了 `PATH`。
+Windows 常见全局命令目录通常在：
+
+```powershell
+$env:APPDATA\npm
+```
+
+可以先看这个目录下有没有：
+
+```powershell
+Get-ChildItem "$env:APPDATA\npm" | Where-Object { $_.Name -like "openclaw*" }
+```
+
+如果目录里有 `openclaw.cmd`，但当前 shell 调不到，重开一个 PowerShell 再试。
+还不行，就把该目录加入用户级 `PATH`。
 
 ### 2. Gateway 没起来
 
-优先执行：
+先执行：
 
-```bash
+```powershell
 openclaw doctor
 ```
 
-然后再看：
+再看：
 
-```bash
+```powershell
 openclaw gateway status
 ```
 
-官方 Windows 文档也明确建议在 `WSL2` 内安装 Gateway 服务。
+如果是权限问题，重新用管理员 PowerShell 执行：
 
-### 3. 为什么不建议把 OpenClaw 主体直接装在原生 Windows
+```powershell
+openclaw onboard --install-daemon
+```
 
-因为官方当前的实际推荐路径就是：
+### 3. 安装器报缺少 Git
 
-- CLI + Gateway 运行在 Linux / WSL2
-- 这样 Node、pnpm、shell、skills、二进制依赖都更一致
+只有在你显式使用 `-InstallMethod git` 或某些源码路径流程里，才会需要 Git。
+如果你不打算源码安装，就直接用默认安装器，不要强行走 `git` 模式。
 
-如果只是短期试用，native Windows 可以装。
-如果你要长期维护 bot、skills、workspace，直接从 `WSL2` 开始更省事。
+### 4. 我只想在 Windows 本机跑，不想装 WSL2，可以吗
 
-## 最短可执行路径
+可以。
+这份文档就是原生 Windows 路径。
 
-如果你只想最快跑起来，按这个顺序做：
+但要知道现实限制：
 
-1. 管理员 PowerShell 执行 `wsl --install -d Ubuntu`
-2. 重启，打开 Ubuntu
-3. 在 Ubuntu 里执行 `curl -fsSL https://openclaw.ai/install.sh | bash`
-4. 执行 `openclaw onboard --install-daemon`
-5. 执行 `openclaw gateway status`
-6. 执行 `openclaw dashboard`
+- 某些自定义 skills 假设 shell 是 `bash`
+- 某些脚本默认按 Linux/macOS 路径写
+- 你后面如果要维护复杂 workspace，本机兼容成本通常会高于 `WSL2`
 
-这条路径和官方当前推荐方向一致，后续扩展 skills 也最稳。
+也就是说：
+
+- “装起来并运行”可以在 native Windows 完成
+- “长期维护复杂自定义技能链路”则未必是最低成本方案
+
+### 5. 当前这个仓库能不能直接照搬到 Windows 本机
+
+不建议直接照搬。
+
+原因：
+
+- 当前仓库大量命令入口是 `make`
+- 脚本主要是 `bash`
+- 技能安装和软链逻辑也偏 Unix 风格
+
+如果你的目标只是先把 OpenClaw 装起来，先按这份文档完成原生 Windows 安装。
+如果后面你还要把这个单仓管理方案迁到 Windows，需要单独补一层 PowerShell 兼容脚本。
+
+## 最短可执行命令清单
+
+只看这一段也可以完成安装：
+
+```powershell
+iwr -useb https://openclaw.ai/install.ps1 | iex
+openclaw onboard --install-daemon
+openclaw gateway status
+openclaw health
+openclaw dashboard
+```
+
+如果你要的是“就在 Windows 本机装一个可用的 OpenClaw”，这就是最短路径。
