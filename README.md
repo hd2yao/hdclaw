@@ -34,8 +34,12 @@ make run-web-query QUERY="查看一下有关 AI 的最新新闻，给我10条"
 ```
 
 ## Docker（全新 OpenClaw，独立于本仓库配置）
-当前容器模板目录：`containers/openclaw-fresh/`。
-下面这组命令会创建一个全新的容器实例，只安装官方 OpenClaw，不执行本仓库的 `make sync/install-skills`：
+当前提供两套容器模板：
+
+- `containers/openclaw-fresh/`：从 `node:22-bookworm-slim` 开始，再用官方安装脚本安装 OpenClaw
+- `containers/openclaw-official/`：直接基于官方 OpenClaw 镜像，再叠加你当前工作流需要的依赖
+
+下面这组命令默认创建 `openclaw-fresh`：
 
 ```bash
 make docker-build
@@ -47,8 +51,7 @@ make docker-shell
 
 ```bash
 DOCKER_STACK=openclaw-fresh make docker-up
-# 未来例如：
-# DOCKER_STACK=openclaw-dev2 make docker-up
+DOCKER_STACK=openclaw-official make docker-up
 ```
 
 首次初始化（全新实例）建议直接在宿主机执行：
@@ -66,6 +69,16 @@ OPENCLAW_TELEGRAM_ALLOW_FROM=1871908422 make docker-fresh-bootstrap
 ```
 
 完整步骤与踩坑见 [docs/openclaw-fresh-docker-oneclick.md](docs/openclaw-fresh-docker-oneclick.md)。
+
+如果你想以官方镜像为基础来自定义自己的环境：
+
+```bash
+OPENCLAW_DASHBOARD_PORT=18890 DOCKER_STACK=openclaw-official make docker-build
+OPENCLAW_DASHBOARD_PORT=18890 DOCKER_STACK=openclaw-official make docker-up
+OPENCLAW_DASHBOARD_PORT=18890 OPENCLAW_TELEGRAM_ALLOW_FROM=1871908422 make docker-official-bootstrap
+```
+
+完整说明见 [docs/openclaw-official-docker-oneclick.md](docs/openclaw-official-docker-oneclick.md)。
 
 如果 Docker 里的 Telegram bot 要接群聊，注意两点：
 
