@@ -86,6 +86,23 @@ OPENCLAW_DASHBOARD_PORT=18890 OPENCLAW_TELEGRAM_ALLOW_FROM=1871908422 make docke
 
 完整说明见 [docs/openclaw-official-docker-oneclick.md](docs/openclaw-official-docker-oneclick.md)。
 
+如果你想用**一个 bot + 两个 agent + 两个 Telegram 群**：
+
+```bash
+OPENCLAW_DASHBOARD_PORT=18890 \
+OPENCLAW_TELEGRAM_ALLOW_FROM=1871908422 \
+OPENCLAW_TELEGRAM_GPT_GROUP_ID=-1001111111111 \
+OPENCLAW_TELEGRAM_QWEN_GROUP_ID=-1002222222222 \
+make docker-official-bootstrap
+```
+
+这会把：
+
+- GPT 群 -> `telegram-gpt` -> `openai-codex/gpt-5.3-codex`
+- Qwen 群 -> `telegram-qwen` -> `local//data/qwen3.5-27b`
+
+路由配置写进容器内 `openclaw.json` 的 `agents.list` + `bindings`，两条群会话互不干扰；私聊和未命中的消息仍走默认 `main`。
+
 如果 Docker 里的 Telegram bot 要接群聊，注意两点：
 
 - Docker 实例不走本仓库的 `make sync`；Telegram 群策略要写到容器内 `~/.openclaw/openclaw.json`

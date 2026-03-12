@@ -17,6 +17,13 @@ COMPOSE_FILE="${ROOT_DIR}/containers/${DOCKER_STACK}/docker-compose.yml"
 SERVICE="${OPENCLAW_DOCKER_SERVICE:-openclaw}"
 DASHBOARD_PORT="${OPENCLAW_DASHBOARD_PORT:-18790}"
 TELEGRAM_ALLOW_FROM="${OPENCLAW_TELEGRAM_ALLOW_FROM:-}"
+TELEGRAM_GPT_GROUP_ID="${OPENCLAW_TELEGRAM_GPT_GROUP_ID:-}"
+TELEGRAM_QWEN_GROUP_ID="${OPENCLAW_TELEGRAM_QWEN_GROUP_ID:-}"
+TELEGRAM_GPT_AGENT_ID="${OPENCLAW_TELEGRAM_GPT_AGENT_ID:-telegram-gpt}"
+TELEGRAM_QWEN_AGENT_ID="${OPENCLAW_TELEGRAM_QWEN_AGENT_ID:-telegram-qwen}"
+TELEGRAM_GPT_MODEL="${OPENCLAW_TELEGRAM_GPT_MODEL:-openai-codex/gpt-5.3-codex}"
+TELEGRAM_QWEN_MODEL="${OPENCLAW_TELEGRAM_QWEN_MODEL:-local//data/qwen3.5-27b}"
+TELEGRAM_GROUP_REQUIRE_MENTION="${OPENCLAW_TELEGRAM_GROUP_REQUIRE_MENTION:-true}"
 SKIP_BUILD="${OPENCLAW_SKIP_BUILD:-0}"
 LOCAL_BASE_URL="${OPENCLAW_LOCAL_BASE_URL:-http://192.168.6.230:30000/v1}"
 LOCAL_TOOLCALL_ADAPTER="${OPENCLAW_LOCAL_TOOLCALL_ADAPTER:-sglang}"
@@ -208,6 +215,131 @@ configure_exec_approvals() {
   '
 }
 
+configure_telegram_group_agents() {
+  if [[ -z "$TELEGRAM_GPT_GROUP_ID" && -z "$TELEGRAM_QWEN_GROUP_ID" ]]; then
+    log "telegram group agent routing not configured; skip multi-agent setup"
+    return
+  fi
+
+  if [[ -z "$TELEGRAM_GPT_GROUP_ID" || -z "$TELEGRAM_QWEN_GROUP_ID" ]]; then
+    echo "both OPENCLAW_TELEGRAM_GPT_GROUP_ID and OPENCLAW_TELEGRAM_QWEN_GROUP_ID are required for dual-agent telegram routing" >&2
+    exit 1
+  fi
+
+  if [[ -z "$TELEGRAM_ALLOW_FROM" ]]; then
+    echo "OPENCLAW_TELEGRAM_ALLOW_FROM is required when configuring telegram group agents" >&2
+    exit 1
+  fi
+
+  log "configuring telegram group agents and bindings"
+  compose exec -T "$SERVICE" sh -lc "set -e
+    TELEGRAM_ALLOW_FROM='$TELEGRAM_ALLOW_FROM' \
+    TELEGRAM_GPT_GROUP_ID='$TELEGRAM_GPT_GROUP_ID' \
+    TELEGRAM_QWEN_GROUP_ID='$TELEGRAM_QWEN_GROUP_ID' \
+    TELEGRAM_GPT_AGENT_ID='$TELEGRAM_GPT_AGENT_ID' \
+    TELEGRAM_QWEN_AGENT_ID='$TELEGRAM_QWEN_AGENT_ID' \
+    TELEGRAM_GPT_MODEL='$TELEGRAM_GPT_MODEL' \
+    TELEGRAM_QWEN_MODEL='$TELEGRAM_QWEN_MODEL' \
+    TELEGRAM_GROUP_REQUIRE_MENTION='$TELEGRAM_GROUP_REQUIRE_MENTION' \
+    node - <<'NODE'
+const fs = require('fs');
+
+const configPath = '/home/node/.openclaw/openclaw.json';
+const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+const allowFrom = (process.env.TELEGRAM_ALLOW_FROM || '')
+  .split(',')
+  .map((value) => value.trim())
+  .filter(Boolean);
+const gptGroupId = (process.env.TELEGRAM_GPT_GROUP_ID || '').trim();
+const qwenGroupId = (process.env.TELEGRAM_QWEN_GROUP_ID || '').trim();
+const gptAgentId = (process.env.TELEGRAM_GPT_AGENT_ID || 'telegram-gpt').trim();
+const qwenAgentId = (process.env.TELEGRAM_QWEN_AGENT_ID || 'telegram-qwen').trim();
+const gptModel = (process.env.TELEGRAM_GPT_MODEL || 'openai-codex/gpt-5.3-codex').trim();
+const qwenModel = (process.env.TELEGRAM_QWEN_MODEL || 'local//data/qwen3.5-27b').trim();
+const requireMention = String(process.env.TELEGRAM_GROUP_REQUIRE_MENTION || 'true').trim().toLowerCase() !== 'false';
+const sharedWorkspace = config?.agents?.defaults?.workspace || '/home/node/.openclaw/workspace';
+const defaultPrimaryModel = config?.agents?.defaults?.model?.primary || 'openai-codex/gpt-5.3-codex';
+const existingGroupAllowFrom = Array.isArray(config?.channels?.telegram?.groupAllowFrom)
+  ? config.channels.telegram.groupAllowFrom.map((value) => String(value).trim()).filter(Boolean)
+  : [];
+
+config.agents ||= {};
+config.agents.list ||= [];
+config.bindings ||= [];
+config.channels ||= {};
+config.channels.telegram ||= {};
+config.channels.telegram.groups ||= {};
+
+const upsertAgent = (id, name, model) => {
+  const current = config.agents.list.find((entry) => entry && entry.id === id);
+  const next = {
+    ...(current || {}),
+    id,
+    name,
+    workspace: current?.workspace || sharedWorkspace,
+    model,
+  };
+  if (!current) config.agents.list.push(next);
+  else Object.assign(current, next);
+};
+
+upsertAgent('main', 'Main', defaultPrimaryModel);
+upsertAgent(gptAgentId, 'Telegram GPT', gptModel);
+upsertAgent(qwenAgentId, 'Telegram Qwen', qwenModel);
+
+for (const entry of config.agents.list) {
+  if (!entry || typeof entry !== 'object') continue;
+  if (entry.id === 'main') entry.default = true;
+  else if ([gptAgentId, qwenAgentId].includes(entry.id) && entry.default) delete entry.default;
+}
+
+config.channels.telegram.groupAllowFrom = Array.from(new Set([...existingGroupAllowFrom, ...allowFrom]));
+
+for (const groupId of [gptGroupId, qwenGroupId]) {
+  config.channels.telegram.groups[groupId] = {
+    ...(config.channels.telegram.groups[groupId] || {}),
+    requireMention,
+    enabled: true,
+  };
+}
+
+const isSamePeer = (binding, groupId) =>
+  binding?.match?.channel === 'telegram' &&
+  binding?.match?.peer?.kind === 'group' &&
+  String(binding?.match?.peer?.id || '') === String(groupId);
+
+config.bindings = config.bindings.filter(
+  (binding) =>
+    ![gptAgentId, qwenAgentId].includes(binding?.agentId) &&
+    !isSamePeer(binding, gptGroupId) &&
+    !isSamePeer(binding, qwenGroupId),
+);
+
+config.bindings.unshift(
+  {
+    agentId: qwenAgentId,
+    match: { channel: 'telegram', peer: { kind: 'group', id: qwenGroupId } },
+  },
+  {
+    agentId: gptAgentId,
+    match: { channel: 'telegram', peer: { kind: 'group', id: gptGroupId } },
+  },
+);
+
+fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + '\\n');
+console.log(JSON.stringify({
+  agents: config.agents.list.filter((entry) => ['main', gptAgentId, qwenAgentId].includes(entry.id)),
+  bindings: config.bindings.filter((binding) => [gptAgentId, qwenAgentId].includes(binding.agentId)),
+  groupAllowFrom: config.channels.telegram.groupAllowFrom,
+  groups: {
+    [gptGroupId]: config.channels.telegram.groups[gptGroupId],
+    [qwenGroupId]: config.channels.telegram.groups[qwenGroupId],
+  },
+}, null, 2));
+NODE
+    openclaw config validate >/dev/null"
+}
+
 ensure_weixin_read_runtime() {
   log "ensuring weixin-read-mcp python dependencies"
   compose exec -T "$SERVICE" sh -lc '
@@ -242,7 +374,7 @@ start_node_host() {
   compose exec -T "$SERVICE" sh -lc '
     pids="$(ps -ef | grep "[o]penclaw node run --host 127.0.0.1 --port 18789" | awk "{print \$2}")"
     if [ -n "$pids" ]; then
-      echo "$pids" | xargs -r kill
+      echo "$pids" | xargs -r kill || true
     fi
     nohup openclaw node run --host 127.0.0.1 --port 18789 >> /home/node/.openclaw/node.log 2>&1 &
   '
@@ -261,6 +393,12 @@ verify_state() {
     openclaw config get tools.elevated --json
     openclaw config get models.providers.local --json
     openclaw config get agents.defaults.models --json
+    if [ -n "${OPENCLAW_TELEGRAM_GPT_GROUP_ID:-}" ] && [ -n "${OPENCLAW_TELEGRAM_QWEN_GROUP_ID:-}" ]; then
+      openclaw config get agents.list --json
+      openclaw config get bindings --json
+      openclaw config get channels.telegram.groups --json
+      openclaw agents list --bindings || true
+    fi
     if [ -f /tmp/openclaw-adapter-models.json ]; then
       cat /tmp/openclaw-adapter-models.json
     fi
@@ -296,6 +434,7 @@ main() {
   configure_local_provider_connection
   configure_local_model_params
   configure_exec_approvals
+  configure_telegram_group_agents
   ensure_weixin_read_runtime
   ensure_playwright_runtime
 
