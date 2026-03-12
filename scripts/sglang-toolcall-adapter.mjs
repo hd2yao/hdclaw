@@ -145,6 +145,13 @@ function sanitizeUserFacingText(rawText) {
   return stripLeadingMetaPreamble(stripInternalMarkers(rawText));
 }
 
+function isPureInternalMarkerChunk(rawText) {
+  const text = String(rawText ?? "").trim();
+  if (!text) return false;
+  const stripped = text.replace(/<\/?think(?:ing)?>/gi, "").replace(/<\/?final\b[^>]*>/gi, "").trim();
+  return stripped.length === 0;
+}
+
 function toOpenAIToolCall(parsedCall) {
   return {
     id: `call_${randomUUID().replace(/-/g, "").slice(0, 24)}`,
@@ -418,6 +425,7 @@ function makeStreamState() {
     emittedToolCalls: false,
     introResolved: false,
     introBuffer: "",
+    emittedUserFacingText: false,
   };
 }
 
@@ -442,6 +450,7 @@ function sendRoleChunk(res, state) {
 
 function sendTextChunk(res, state, text) {
   if (!text) return;
+  state.emittedUserFacingText = true;
   sendSseData(res, {
     ...state.base,
     choices: [{ index: 0, delta: { content: text }, finish_reason: null }],
@@ -637,6 +646,7 @@ function flushBufferedOutput(res, state) {
 async function handleStreamChat(req, res, targetUrl, requestJson, requestId) {
   const startedAt = Date.now();
   const state = makeStreamState();
+  const wantsTools = Array.isArray(requestJson?.tools) && requestJson.tools.length > 0;
   const decoder = new TextDecoder();
   let pending = "";
   let streamOpened = false;
@@ -698,11 +708,10 @@ async function handleStreamChat(req, res, targetUrl, requestJson, requestId) {
         const choice = payload?.choices?.[0] ?? {};
         const delta = choice?.delta ?? {};
 
-        if (delta.role === "assistant" && !state.roleSent) {
-          emitAndTrack(() => sendRoleChunk(res, state));
-        }
-
         if (typeof delta.content === "string" && delta.content.length > 0) {
+          if (isPureInternalMarkerChunk(delta.content)) {
+            continue;
+          }
           emitAndTrack(() => {
             if (!state.roleSent) sendRoleChunk(res, state);
             consumeContentDelta(res, state, delta.content);
@@ -756,6 +765,14 @@ async function handleStreamChat(req, res, targetUrl, requestJson, requestId) {
         created: Math.floor(Date.now() / 1000),
         model: "unknown-model",
       };
+    }
+
+    if (!streamOpened && wantsTools && !state.emittedToolCalls && !state.emittedUserFacingText && streamFallbackEnabled) {
+      logInfo(`[req=${requestId}] stream yielded no usable tool output, fallback to legacy non-stream`);
+      await handleNonStreamChat(req, res, targetUrl, requestJson, { mode: "fallback", asStream: true });
+      const totalMs = Date.now() - startedAt;
+      logInfo(`[req=${requestId}] stream_mode=fallback first_chunk_ms=${totalMs} total_ms=${totalMs} fallback_used=true`);
+      return;
     }
 
     if (!streamOpened) {

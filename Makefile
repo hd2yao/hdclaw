@@ -52,6 +52,7 @@ test-adapter:
 	bash tests/adapter/streaming-smoke.sh
 	bash tests/adapter/streaming-contract.sh
 	bash tests/adapter/toolcall-transform-stream.sh
+	bash tests/adapter/stream-empty-toolcall-fallback.sh
 	bash tests/adapter/fallback-behavior.sh
 	bash tests/adapter/launchd-service-template.sh
 
