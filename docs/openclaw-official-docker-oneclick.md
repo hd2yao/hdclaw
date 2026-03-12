@@ -61,6 +61,79 @@ OPENCLAW_TELEGRAM_ALLOW_FROM=1871908422 \
 make docker-official-bootstrap
 ```
 
+## 一个 bot，两个 agent，两个 Telegram 群
+
+如果你想：
+
+- 同一个 Telegram bot
+- GPT 一个群
+- Qwen 一个群
+- 两条会话互不干扰
+
+这套 `official` bootstrap 已经支持。
+
+先准备两个群 ID：
+
+```bash
+docker exec openclaw-official-openclaw-1 sh -lc 'openclaw channels logs --channel telegram'
+```
+
+看到群消息后，记录群 `chat_id`，通常形如 `-1001234567890`。
+
+然后执行：
+
+```bash
+cd /Users/dysania/program/openclaw
+OPENCLAW_DASHBOARD_PORT=18890 \
+OPENCLAW_TELEGRAM_ALLOW_FROM=1871908422 \
+OPENCLAW_TELEGRAM_GPT_GROUP_ID=-1001111111111 \
+OPENCLAW_TELEGRAM_QWEN_GROUP_ID=-1002222222222 \
+make docker-official-bootstrap
+```
+
+默认会创建两个 agent：
+
+- `telegram-gpt` -> `openai-codex/gpt-5.3-codex`
+- `telegram-qwen` -> `local//data/qwen3.5-27b`
+
+并保留 `main` 作为默认 agent：
+
+- 私聊和未命中的路由继续走 `main`
+- 只有你指定的两个群会被精确绑定到 `telegram-gpt` / `telegram-qwen`
+
+并自动写入：
+
+- `agents.list`
+- `bindings`
+- `channels.telegram.groupAllowFrom`
+- `channels.telegram.groups.<chatId>`
+
+默认群内仍要求 `@bot` 提及才回复，这样更安全。如果你希望专用群里不需要提及：
+
+```bash
+OPENCLAW_TELEGRAM_GROUP_REQUIRE_MENTION=false \
+OPENCLAW_TELEGRAM_ALLOW_FROM=1871908422 \
+OPENCLAW_TELEGRAM_GPT_GROUP_ID=-1001111111111 \
+OPENCLAW_TELEGRAM_QWEN_GROUP_ID=-1002222222222 \
+make docker-official-bootstrap
+```
+
+可覆盖 agent id / 模型：
+
+```bash
+OPENCLAW_TELEGRAM_GPT_AGENT_ID=team-gpt \
+OPENCLAW_TELEGRAM_QWEN_AGENT_ID=team-qwen \
+OPENCLAW_TELEGRAM_GPT_MODEL=openai-codex/gpt-5.3-codex \
+OPENCLAW_TELEGRAM_QWEN_MODEL=local//data/qwen3.5-27b \
+make docker-official-bootstrap
+```
+
+注意：
+
+- 这只解决“不同群路由到不同 agent”的问题。
+- `qwen` 群是否稳定，仍取决于本地模型服务本身是否稳定。
+- 如果 `qwen` 群需要 Tavily 检索，还要把 `TAVILY_API_KEY` 注入容器。
+
 ## 可覆盖官方镜像 tag
 
 默认值：
