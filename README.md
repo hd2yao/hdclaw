@@ -93,6 +93,8 @@ OPENCLAW_DASHBOARD_PORT=18890 OPENCLAW_TELEGRAM_ALLOW_FROM=1871908422 make docke
 DOCKER_STACK=openclaw-official OPENCLAW_DASHBOARD_PORT=18890 make docker-dashboard-token
 ```
 
+容器启动时会自动修补 Control UI 的本地设置逻辑，因此同一浏览器 + 同一 origin 下，刷新页面和重启容器后都应继续保留这个 token。
+
 不要混用 `127.0.0.1:18890` 和 `localhost:18890`，两者本地存储互不共享。
 
 如果你想用**一个 bot + 两个 agent + 两个 Telegram 群**：
