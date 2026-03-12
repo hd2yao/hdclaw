@@ -66,6 +66,51 @@ start_sglang_adapter() {
   return 1
 }
 
+patch_control_ui_token_persistence() {
+  if ! python3 - <<'PY'
+from pathlib import Path
+import glob
+
+paths = [Path(p) for p in glob.glob("/app/dist/control-ui/assets/index-*.js")]
+if not paths:
+    raise SystemExit(0)
+
+read_old = "token:t.token"
+read_new = 'token:typeof s.token=="string"&&s.token.trim()?s.token.trim():t.token'
+write_old = "const t={gatewayUrl:e.gatewayUrl,sessionKey:e.sessionKey,lastActiveSessionKey:e.lastActiveSessionKey"
+write_new = "const t={gatewayUrl:e.gatewayUrl,token:e.token,sessionKey:e.sessionKey,lastActiveSessionKey:e.lastActiveSessionKey"
+
+patched_any = False
+saw_markers = False
+for path in paths:
+    content = path.read_text(encoding="utf-8")
+    updated = content
+    changed = False
+    if any(marker in content for marker in (read_old, read_new, write_old, write_new)):
+        saw_markers = True
+    if read_old in updated:
+        updated = updated.replace(read_old, read_new, 1)
+        changed = True
+    if write_old in updated:
+        updated = updated.replace(write_old, write_new, 1)
+        changed = True
+    if changed:
+        path.write_text(updated, encoding="utf-8")
+        patched_any = True
+
+if not saw_markers:
+    raise SystemExit("[docker-init] failed to locate Control UI token persistence markers")
+
+if patched_any:
+    print("[docker-init] patched Control UI token persistence")
+else:
+    print("[docker-init] Control UI token persistence already patched")
+PY
+  then
+    echo "[docker-init] warning: failed to patch Control UI token persistence" >&2
+  fi
+}
+
 if [[ ! -f "$OPENCLAW_CONFIG" ]]; then
   echo "[docker-init] fresh instance detected (no config file yet)"
   if [[ "${OPENCLAW_DOCKER_AUTO_ONBOARD:-false}" == "true" ]]; then
@@ -146,6 +191,7 @@ PY
   fi
 fi
 
+patch_control_ui_token_persistence
 start_sglang_adapter
 
 if [[ "${OPENCLAW_DOCKER_GATEWAY:-false}" == "true" ]]; then
