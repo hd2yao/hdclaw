@@ -86,6 +86,15 @@ OPENCLAW_DASHBOARD_PORT=18890 OPENCLAW_TELEGRAM_ALLOW_FROM=1871908422 make docke
 
 完整说明见 [docs/openclaw-official-docker-oneclick.md](docs/openclaw-official-docker-oneclick.md)。
 
+`openclaw-official` 的 Dashboard 现在会在宿主机固定保存 gateway token，不再依赖每次取新的 token URL。
+推荐固定只用 `http://127.0.0.1:18890/`，第一次在 Control UI 设置里粘一次：
+
+```bash
+DOCKER_STACK=openclaw-official OPENCLAW_DASHBOARD_PORT=18890 make docker-dashboard-token
+```
+
+不要混用 `127.0.0.1:18890` 和 `localhost:18890`，两者本地存储互不共享。
+
 如果你想用**一个 bot + 两个 agent + 两个 Telegram 群**：
 
 ```bash

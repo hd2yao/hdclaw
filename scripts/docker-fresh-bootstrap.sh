@@ -16,6 +16,8 @@ DOCKER_STACK="${DOCKER_STACK:-openclaw-fresh}"
 COMPOSE_FILE="${ROOT_DIR}/containers/${DOCKER_STACK}/docker-compose.yml"
 SERVICE="${OPENCLAW_DOCKER_SERVICE:-openclaw}"
 DASHBOARD_PORT="${OPENCLAW_DASHBOARD_PORT:-18790}"
+GATEWAY_TOKEN="${OPENCLAW_GATEWAY_TOKEN:-}"
+GATEWAY_TOKEN_FILE="${OPENCLAW_GATEWAY_TOKEN_FILE:-$HOME/.openclaw-docker/${DOCKER_STACK}.gateway-token}"
 TELEGRAM_ALLOW_FROM="${OPENCLAW_TELEGRAM_ALLOW_FROM:-}"
 TELEGRAM_GPT_GROUP_ID="${OPENCLAW_TELEGRAM_GPT_GROUP_ID:-}"
 TELEGRAM_QWEN_GROUP_ID="${OPENCLAW_TELEGRAM_QWEN_GROUP_ID:-}"
@@ -42,6 +44,25 @@ need_cmd() {
 
 log() {
   printf '[docker-fresh-bootstrap] %s\n' "$*"
+}
+
+ensure_gateway_token() {
+  if [[ -n "$GATEWAY_TOKEN" ]]; then
+    return
+  fi
+
+  mkdir -p "$(dirname "$GATEWAY_TOKEN_FILE")"
+  if [[ ! -s "$GATEWAY_TOKEN_FILE" ]]; then
+    need_cmd openssl
+    umask 077
+    openssl rand -hex 24 >"$GATEWAY_TOKEN_FILE"
+  fi
+  GATEWAY_TOKEN="$(tr -d '\r\n' <"$GATEWAY_TOKEN_FILE")"
+
+  if [[ -z "$GATEWAY_TOKEN" ]]; then
+    echo "failed to load gateway token from $GATEWAY_TOKEN_FILE" >&2
+    exit 1
+  fi
 }
 
 compose() {
@@ -83,7 +104,7 @@ csv_to_json_array() {
 
 configure_openclaw() {
   log "applying OpenClaw config"
-  compose exec -T "$SERVICE" sh -lc '
+  compose exec -T "$SERVICE" sh -lc "
     set -e
     openclaw config set tools.profile full
     openclaw config set commands.bash true
@@ -94,9 +115,11 @@ configure_openclaw() {
     openclaw config set plugins.entries.acpx.enabled true
     openclaw config set plugins.entries.acpx.config.permissionMode approve-all
     openclaw config set plugins.entries.acpx.config.nonInteractivePermissions fail
+    openclaw config set gateway.auth.mode token
+    openclaw config set gateway.auth.token \"$GATEWAY_TOKEN\"
     openclaw config set gateway.controlUi.allowInsecureAuth true
     openclaw config set gateway.controlUi.dangerouslyDisableDeviceAuth true
-  '
+  "
 
   local origins_json
   origins_json=$(printf '["http://localhost:%s","http://127.0.0.1:%s","http://localhost:18789","http://127.0.0.1:18789"]' "$DASHBOARD_PORT" "$DASHBOARD_PORT")
@@ -372,7 +395,7 @@ PY
 start_node_host() {
   log "starting node host"
   compose exec -T "$SERVICE" sh -lc '
-    pids="$(ps -ef | grep "[o]penclaw node run --host 127.0.0.1 --port 18789" | awk "{print \$2}")"
+    pids="$(ps -eo pid=,args= | awk '\''$0 ~ /^[[:space:]]*[0-9]+[[:space:]]+openclaw node run --host 127\.0\.0\.1 --port 18789([[:space:]]|$)/ {print $1}'\'')"
     if [ -n "$pids" ]; then
       echo "$pids" | xargs -r kill || true
     fi
@@ -418,6 +441,9 @@ main() {
 
   log "stack=$DOCKER_STACK service=$SERVICE compose=$COMPOSE_FILE"
   log "dashboard_port=$DASHBOARD_PORT skip_build=$SKIP_BUILD"
+  log "gateway_token_file=$GATEWAY_TOKEN_FILE"
+
+  ensure_gateway_token
 
   if [[ "$SKIP_BUILD" != "1" ]]; then
     log "building image"
@@ -450,8 +476,9 @@ main() {
 [docker-fresh-bootstrap] done
 Next manual steps (if not yet configured):
 1) Open Dashboard: http://127.0.0.1:${DASHBOARD_PORT}/
-2) Complete OpenAI Codex OAuth login in container session
-3) Pair Telegram device and approve channel pairing
+2) If Dashboard asks for token, run: DOCKER_STACK=${DOCKER_STACK} OPENCLAW_DASHBOARD_PORT=${DASHBOARD_PORT} make docker-dashboard-token
+3) Complete OpenAI Codex OAuth login in container session
+4) Pair Telegram device and approve channel pairing
 EOF
 }
 

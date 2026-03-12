@@ -39,8 +39,32 @@ Dashboard 端口只绑定到本机回环地址：
 - `http://127.0.0.1:18890/`
 - `http://localhost:18890/`
 
-Gateway 在 Docker 中仍会保留 token 认证，所以直接打开裸地址时，浏览器可能会显示 `device identity required` 或 `Disconnected from gateway`。
-正确做法是先输出宿主机可直接打开的 URL：
+Gateway 在 Docker 中仍会保留 token 认证，但 bootstrap 现在会在宿主机固定保存一个 token 文件，不会因为容器重建而漂移。
+
+默认 token 文件：
+
+- `~/.openclaw-docker/openclaw-official.gateway-token`
+
+推荐流程：
+
+1. 固定只用 `http://127.0.0.1:18890/`
+2. 第一次进入 Dashboard 时，在右上角 Control UI 设置里粘一次 token
+3. 后续浏览器会按这个 origin 记住 token，重启容器后仍可继续使用
+
+不要混用：
+
+- `127.0.0.1:18890`
+- `localhost:18890`
+
+这两个是不同 origin，本地存储互不共享，看起来会像“重启后 token 丢了”。
+
+如果你需要自助查看当前固定 token：
+
+```bash
+DOCKER_STACK=openclaw-official OPENCLAW_DASHBOARD_PORT=18890 make docker-dashboard-token
+```
+
+保留的 `docker-dashboard-url` 只是应急入口。只有在浏览器本地 token 还没录入时，才需要输出带 token 的 URL：
 
 ```bash
 DOCKER_STACK=openclaw-official OPENCLAW_DASHBOARD_PORT=18890 make docker-dashboard-url
@@ -56,6 +80,15 @@ DOCKER_STACK=openclaw-official make docker-shell
 
 ```bash
 cd /Users/dysania/program/openclaw
+OPENCLAW_DASHBOARD_PORT=18890 \
+OPENCLAW_TELEGRAM_ALLOW_FROM=1871908422 \
+make docker-official-bootstrap
+```
+
+如果你希望显式指定固定 token，而不是使用宿主机默认 token 文件：
+
+```bash
+OPENCLAW_GATEWAY_TOKEN=your-own-stable-token \
 OPENCLAW_DASHBOARD_PORT=18890 \
 OPENCLAW_TELEGRAM_ALLOW_FROM=1871908422 \
 make docker-official-bootstrap
