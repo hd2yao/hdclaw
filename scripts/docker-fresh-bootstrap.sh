@@ -317,14 +317,18 @@ for (const entry of config.agents.list) {
 }
 
 config.channels.telegram.groupAllowFrom = Array.from(new Set([...existingGroupAllowFrom, ...allowFrom]));
-
-for (const groupId of [gptGroupId, qwenGroupId]) {
-  config.channels.telegram.groups[groupId] = {
-    ...(config.channels.telegram.groups[groupId] || {}),
+config.channels.telegram.groups = {
+  [gptGroupId]: {
+    ...(config.channels.telegram.groups[gptGroupId] || {}),
     requireMention,
     enabled: true,
-  };
-}
+  },
+  [qwenGroupId]: {
+    ...(config.channels.telegram.groups[qwenGroupId] || {}),
+    requireMention,
+    enabled: true,
+  },
+};
 
 const isSamePeer = (binding, groupId) =>
   binding?.match?.channel === 'telegram' &&
