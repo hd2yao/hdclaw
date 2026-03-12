@@ -77,10 +77,38 @@ function nonStreamCompletion(content) {
   };
 }
 
+function nonStreamToolCallCompletion(name, argsText) {
+  return {
+    id: `mock-${Date.now()}`,
+    object: "chat.completion",
+    created: Math.floor(Date.now() / 1000),
+    model: "mock-model",
+    choices: [
+      {
+        index: 0,
+        finish_reason: "tool_calls",
+        message: {
+          role: "assistant",
+          content: `<tool_call><function=${name}><parameter=query>${argsText}</parameter></function></tool_call>`,
+        },
+      },
+    ],
+    usage: {
+      prompt_tokens: 10,
+      completion_tokens: 8,
+      total_tokens: 18,
+    },
+  };
+}
+
 async function handleChat(req, res, reqJson) {
   const stream = Boolean(reqJson?.stream);
 
   if (!stream) {
+    if (mode === "stream-empty-toolcall-fallback") {
+      sendJson(res, 200, nonStreamToolCallCompletion("web_search", "latest ai news"));
+      return;
+    }
     sendJson(res, 200, nonStreamCompletion("fallback-ok"));
     return;
   }
@@ -129,6 +157,30 @@ async function handleChat(req, res, reqJson) {
         prompt_tokens: 10,
         completion_tokens: 8,
         total_tokens: 18,
+      },
+    });
+    sendSseDone(res);
+    return;
+  }
+
+  if (mode === "stream-empty-toolcall-fallback") {
+    const base = baseChunk();
+    sendSseStart(res);
+    sendSseChunk(res, {
+      ...base,
+      choices: [{ index: 0, delta: { role: "assistant" }, finish_reason: null }],
+    });
+    sendSseChunk(res, {
+      ...base,
+      choices: [{ index: 0, delta: { content: "</think>" }, finish_reason: null }],
+    });
+    sendSseChunk(res, {
+      ...base,
+      choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+      usage: {
+        prompt_tokens: 10,
+        completion_tokens: 1,
+        total_tokens: 11,
       },
     });
     sendSseDone(res);
