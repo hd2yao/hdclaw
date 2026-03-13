@@ -86,6 +86,15 @@ DOCKER_STACK=openclaw-official OPENCLAW_DASHBOARD_PORT=18890 make docker-dashboa
 
 不要混用 `127.0.0.1:18890` 和 `localhost:18890`，两者本地存储互不共享。
 
+如果你要在 Docker 里长期做 GitHub push / PR / merge，优先用 `gh auth`，不要把 SSH key 临时写进容器层：
+
+```bash
+DOCKER_STACK=openclaw-official make docker-gh-auth
+DOCKER_STACK=openclaw-official make docker-gh-status
+```
+
+`openclaw-official` 现在会持久化 `/home/node/.config/gh`，所以只需登录一次。
+
 如果你想用**一个 bot + 两个 agent + 两个 Telegram 群**：
 
 ```bash

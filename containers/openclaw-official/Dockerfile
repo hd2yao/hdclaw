@@ -14,6 +14,7 @@ RUN if [ -f /etc/apt/sources.list.d/debian.sources ]; then \
 
 RUN apt-get update -o Acquire::Retries=3 \
   && apt-get install -y -o Acquire::Retries=3 --no-install-recommends \
+    gh \
     sudo \
     python3 \
     python3-pip \
@@ -50,7 +51,7 @@ COPY containers/openclaw-official/openclaw-container-init.sh /usr/local/bin/open
 COPY scripts/sglang-toolcall-adapter.mjs /usr/local/lib/openclaw/sglang-toolcall-adapter.mjs
 
 RUN chmod +x /usr/local/bin/openclaw-container-init \
-  && mkdir -p /home/node/.openclaw /home/node/workspace \
+  && mkdir -p /home/node/.openclaw /home/node/.config/gh /home/node/workspace \
   && chown -R node:node /home/node
 
 WORKDIR /home/node/workspace

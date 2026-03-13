@@ -3,7 +3,7 @@ DOCKER_STACK ?= openclaw-official
 DASHBOARD_PORT := $(if $(OPENCLAW_DASHBOARD_PORT),$(OPENCLAW_DASHBOARD_PORT),18890)
 DOCKER_COMPOSE := docker compose -f containers/$(DOCKER_STACK)/docker-compose.yml
 
-.PHONY: bootstrap sync sync-workspace-guards install-skills verify doctor start restart status test-config test-skills test-keyless-search test-tavily-search test-search-router test-no-brave-search test-adapter test-adapter-service test-workspace-guards test-execution-audit test-active-task audit-execution setup-ai-news-daily run-ai-news-daily-now run-web-query test-ai-news-daily docker-build docker-up docker-down docker-shell docker-logs docker-init docker-onboard docker-gateway-start docker-gateway-status docker-dashboard-url docker-dashboard-token docker-official-bootstrap
+.PHONY: bootstrap sync sync-workspace-guards install-skills verify doctor start restart status test-config test-skills test-keyless-search test-tavily-search test-search-router test-no-brave-search test-adapter test-adapter-service test-workspace-guards test-execution-audit test-active-task audit-execution setup-ai-news-daily run-ai-news-daily-now run-web-query test-ai-news-daily docker-build docker-up docker-down docker-shell docker-logs docker-init docker-onboard docker-gateway-start docker-gateway-status docker-dashboard-url docker-dashboard-token docker-gh-auth docker-gh-status docker-official-bootstrap
 
 bootstrap:
 	bash scripts/bootstrap.sh
@@ -124,6 +124,12 @@ docker-dashboard-url:
 docker-dashboard-token:
 	@set -euo pipefail; \
 	$(DOCKER_COMPOSE) exec -T openclaw sh -lc 'openclaw config get gateway.auth.token'
+
+docker-gh-auth:
+	$(DOCKER_COMPOSE) exec openclaw gh auth login
+
+docker-gh-status:
+	$(DOCKER_COMPOSE) exec openclaw gh auth status
 
 docker-official-bootstrap:
 	DOCKER_STACK=openclaw-official OPENCLAW_DASHBOARD_PORT="$(OPENCLAW_DASHBOARD_PORT)" OPENCLAW_TELEGRAM_ALLOW_FROM="$(OPENCLAW_TELEGRAM_ALLOW_FROM)" OPENCLAW_OBSIDIAN_VAULT="$(OPENCLAW_OBSIDIAN_VAULT)" OPENCLAW_OFFICIAL_IMAGE="$(OPENCLAW_OFFICIAL_IMAGE)" bash scripts/docker-fresh-bootstrap.sh

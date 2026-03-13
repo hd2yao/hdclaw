@@ -16,6 +16,7 @@ services:
     volumes:
       - openclaw-home:/home/node/.openclaw
       - openclaw-workspace:/home/node/workspace
+      - openclaw-gh-config:/home/node/.config/gh
       - ${OPENCLAW_OBSIDIAN_VAULT:-/Users/dysania/program/documents/obsidian_vault}:/home/node/.openclaw/workspace/obsidian_vault
     environment:
       OPENCLAW_DOCKER_AUTO_ONBOARD: "false"
@@ -42,3 +43,4 @@ services:
 volumes:
   openclaw-home:
   openclaw-workspace:
+  openclaw-gh-config:
