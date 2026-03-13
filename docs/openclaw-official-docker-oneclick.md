@@ -14,7 +14,7 @@
   - Playwright 运行库
   - `sudo` 免密
   - `openclaw-container-init`
-  - `sglang-toolcall-adapter.mjs`
+  - `sglang-toolcall-adapter.mjs`（仅在显式启用 adapter 时使用）
   - Obsidian 挂载
 
 ## Telegram 轮询稳定性

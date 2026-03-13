@@ -28,7 +28,7 @@ TELEGRAM_QWEN_MODEL="${OPENCLAW_TELEGRAM_QWEN_MODEL:-local//data/qwen3.5-27b}"
 TELEGRAM_GROUP_REQUIRE_MENTION="${OPENCLAW_TELEGRAM_GROUP_REQUIRE_MENTION:-true}"
 SKIP_BUILD="${OPENCLAW_SKIP_BUILD:-0}"
 LOCAL_BASE_URL="${OPENCLAW_LOCAL_BASE_URL:-http://192.168.6.230:30000/v1}"
-LOCAL_TOOLCALL_ADAPTER="${OPENCLAW_LOCAL_TOOLCALL_ADAPTER:-sglang}"
+LOCAL_TOOLCALL_ADAPTER="${OPENCLAW_LOCAL_TOOLCALL_ADAPTER:-off}"
 LOCAL_TOOLCALL_ADAPTER_BASE_URL="${OPENCLAW_LOCAL_TOOLCALL_ADAPTER_BASE_URL:-http://127.0.0.1:31001/v1}"
 LOCAL_MODEL_PARAMS_JSON="${OPENCLAW_LOCAL_MODEL_PARAMS_JSON:-}"
 if [[ -z "$LOCAL_MODEL_PARAMS_JSON" ]]; then
@@ -192,7 +192,7 @@ const fs = require('fs');
 
 const configPath = '/home/node/.openclaw/openclaw.json';
 const localBaseUrl = process.env.LOCAL_BASE_URL || '';
-const adapterMode = process.env.LOCAL_TOOLCALL_ADAPTER || 'sglang';
+const adapterMode = process.env.LOCAL_TOOLCALL_ADAPTER || 'off';
 const adapterBaseUrl = process.env.LOCAL_TOOLCALL_ADAPTER_BASE_URL || '';
 const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 const provider = config?.models?.providers?.local;
@@ -413,7 +413,7 @@ verify_state() {
   log "verifying final state"
   compose exec -T "$SERVICE" sh -lc '
     set -e
-    if [ "${OPENCLAW_LOCAL_TOOLCALL_ADAPTER:-sglang}" = "sglang" ]; then
+    if [ "${OPENCLAW_LOCAL_TOOLCALL_ADAPTER:-off}" = "sglang" ]; then
       curl -fsS "${OPENCLAW_LOCAL_TOOLCALL_ADAPTER_BASE_URL:-http://127.0.0.1:31001/v1}/models" >/tmp/openclaw-adapter-models.json
     fi
     openclaw config get tools.exec --json
