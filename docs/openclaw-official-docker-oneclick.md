@@ -2,8 +2,7 @@
 
 这套模板用于：
 
-- 保留当前 `openclaw-fresh` 容器不动
-- 改为以**官方 OpenClaw 镜像**为基础
+- 以**官方 OpenClaw 镜像**为基础
 - 再叠加你当前已经验证过的自定义层
 
 当前实现方式：
@@ -194,18 +193,6 @@ DOCKER_STACK=openclaw-official make docker-build
 OPENCLAW_APT_MIRROR=mirrors.tuna.tsinghua.edu.cn \
 DOCKER_STACK=openclaw-official make docker-build
 ```
-
-## 与 openclaw-fresh 的区别
-
-`openclaw-fresh`：
-
-- 从 `node:22-bookworm-slim` 开始
-- 再用官方安装脚本安装 OpenClaw
-
-`openclaw-official`：
-
-- 直接从官方 OpenClaw 镜像开始
-- 只追加你当前工作流需要的依赖和脚本
 
 ## 适合的用法
 

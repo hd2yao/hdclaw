@@ -12,7 +12,7 @@ if [[ -f "$ROOT_DIR/.env.local" ]]; then
   set +a
 fi
 
-DOCKER_STACK="${DOCKER_STACK:-openclaw-fresh}"
+DOCKER_STACK="${DOCKER_STACK:-openclaw-official}"
 COMPOSE_FILE="${ROOT_DIR}/containers/${DOCKER_STACK}/docker-compose.yml"
 SERVICE="${OPENCLAW_DOCKER_SERVICE:-openclaw}"
 DASHBOARD_PORT="${OPENCLAW_DASHBOARD_PORT:-18790}"

@@ -120,94 +120,31 @@ if [[ ! -f "$OPENCLAW_CONFIG" ]]; then
         echo "[docker-init] onboard failed, run manually: openclaw onboard" >&2
       fi
     else
-      echo "[docker-init] skip onboard (no interactive TTY)"
-      echo "[docker-init] run inside container: openclaw onboard"
+      echo "[docker-init] auto-onboard requested but no TTY; skipping" >&2
     fi
   else
-    echo "[docker-init] run inside container: openclaw onboard"
+    echo "[docker-init] auto-onboard disabled"
   fi
 else
   echo "[docker-init] existing config found: $OPENCLAW_CONFIG"
-  # In Docker, loopback bind inside container is not reachable from host port mapping.
-  if ! openclaw config set gateway.bind lan >/dev/null 2>&1; then
-    echo "[docker-init] warning: failed to set gateway.bind=lan"
-  fi
-  # Strings such as dnsResultOrder are easier to patch safely via JSON.
-  if ! OPENCLAW_CONFIG="$OPENCLAW_CONFIG" DASHBOARD_PORT="$DASHBOARD_PORT" TELEGRAM_AUTO_SELECT_FAMILY="$TELEGRAM_AUTO_SELECT_FAMILY" TELEGRAM_DNS_RESULT_ORDER="$TELEGRAM_DNS_RESULT_ORDER" python3 - <<'PY'
-import json
-import os
-
-config_path = os.environ["OPENCLAW_CONFIG"]
-dashboard_port = os.environ["DASHBOARD_PORT"]
-auto_select_family = os.environ.get("TELEGRAM_AUTO_SELECT_FAMILY", "").strip().lower()
-dns_result_order = os.environ.get("TELEGRAM_DNS_RESULT_ORDER", "").strip()
-
-with open(config_path, "r", encoding="utf-8") as fh:
-    config = json.load(fh)
-
-control_ui = config.setdefault("gateway", {}).setdefault("controlUi", {})
-control_ui["allowedOrigins"] = [
-    f"http://localhost:{dashboard_port}",
-    f"http://127.0.0.1:{dashboard_port}",
-    "http://localhost:18789",
-    "http://127.0.0.1:18789",
-]
-
-if auto_select_family:
-    telegram_network = config.setdefault("channels", {}).setdefault("telegram", {}).setdefault("network", {})
-    telegram_network["autoSelectFamily"] = auto_select_family == "true"
-    if dns_result_order:
-        telegram_network["dnsResultOrder"] = dns_result_order
-
-with open(config_path, "w", encoding="utf-8") as fh:
-    json.dump(config, fh, ensure_ascii=False, indent=2)
-    fh.write("\n")
-PY
-  then
-    echo "[docker-init] warning: failed to patch gateway.controlUi/telegram.network"
-  fi
-  # Docker containers are typically single-operator local environments.
-  # Disabling device auth avoids repetitive Control UI pairing prompts.
-  if [[ "${OPENCLAW_DOCKER_DISABLE_DEVICE_AUTH:-true}" == "true" ]]; then
-    if ! openclaw config set gateway.controlUi.dangerouslyDisableDeviceAuth true --strict-json >/dev/null 2>&1; then
-      echo "[docker-init] warning: failed to disable Control UI device auth"
-    fi
-  fi
-  # Relax browser checks for localhost/port-mapped Control UI in single-user Docker setups.
-  if [[ "${OPENCLAW_DOCKER_ALLOW_INSECURE_CONTROL_UI_AUTH:-true}" == "true" ]]; then
-    if ! openclaw config set gateway.controlUi.allowInsecureAuth true --strict-json >/dev/null 2>&1; then
-      echo "[docker-init] warning: failed to set gateway.controlUi.allowInsecureAuth=true"
-    fi
-  fi
-  # Enable a minimal default set of channel plugins so Channel schemas render out-of-the-box.
-  if [[ "${OPENCLAW_DOCKER_ENABLE_CHANNEL_PLUGINS:-true}" == "true" ]]; then
-    CHANNEL_PLUGINS="${CHANNEL_PLUGINS_RAW//,/ }"
-    for plugin_id in $CHANNEL_PLUGINS; do
-      [[ -n "$plugin_id" ]] || continue
-      if ! openclaw plugins enable "$plugin_id" >/dev/null 2>&1; then
-        echo "[docker-init] warning: failed to enable plugin '$plugin_id'"
-      fi
-    done
-  fi
 fi
 
 patch_control_ui_token_persistence
 start_sglang_adapter
 
-if [[ "${OPENCLAW_DOCKER_GATEWAY:-false}" == "true" ]]; then
-  if openclaw gateway health >/dev/null 2>&1; then
-    echo "[docker-init] gateway already healthy"
-  else
-    echo "[docker-init] starting gateway (container mode)"
-    nohup openclaw gateway run --allow-unconfigured >"$OPENCLAW_HOME/gateway.log" 2>&1 &
-    for i in 1 2 3 4 5 6 7 8 9 10; do
-      if openclaw gateway health >/dev/null 2>&1; then
-        echo "[docker-init] gateway healthy"
-        break
-      fi
-      sleep 1
-    done
-  fi
+if [[ "${OPENCLAW_DOCKER_GATEWAY:-true}" == "true" ]]; then
+  echo "[docker-init] starting gateway (container mode)"
+  nohup openclaw gateway run --allow-unconfigured >"$OPENCLAW_HOME/gateway.log" 2>&1 &
+  for i in $(seq 1 30); do
+    if openclaw gateway health >/dev/null 2>&1; then
+      echo "[docker-init] gateway healthy"
+      echo "[docker-init] done"
+      exit 0
+    fi
+    sleep 1
+  done
+  echo "[docker-init] gateway failed to become healthy; log: $OPENCLAW_HOME/gateway.log" >&2
+  exit 1
 fi
 
 echo "[docker-init] done"
