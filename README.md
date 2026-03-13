@@ -25,7 +25,6 @@ make verify
 平台安装参考：
 
 - Windows 安装：[`docs/openclaw-windows-install.md`](docs/openclaw-windows-install.md)
-- Docker 全新实例：[`docs/openclaw-fresh-docker-oneclick.md`](docs/openclaw-fresh-docker-oneclick.md)
 - 官方镜像方案：[`docs/openclaw-official-docker-oneclick.md`](docs/openclaw-official-docker-oneclick.md)
 
 ## 常用命令
@@ -40,24 +39,16 @@ make run-web-query QUERY="查看一下有关 AI 的最新新闻，给我10条"
 ```
 
 ## Docker（全新 OpenClaw，独立于本仓库配置）
-当前提供两套容器模板：
+当前只保留官方镜像容器模板：
 
-- `containers/openclaw-fresh/`：从 `node:22-bookworm-slim` 开始，再用官方安装脚本安装 OpenClaw
 - `containers/openclaw-official/`：直接基于官方 OpenClaw 镜像，再叠加你当前工作流需要的依赖
 
-下面这组命令默认创建 `openclaw-fresh`：
+下面这组命令默认创建 `openclaw-official`：
 
 ```bash
 make docker-build
 make docker-up
 make docker-shell
-```
-
-若后续新增多套容器模板，可切换目录名：
-
-```bash
-DOCKER_STACK=openclaw-fresh make docker-up
-DOCKER_STACK=openclaw-official make docker-up
 ```
 
 首次初始化（全新实例）建议直接在宿主机执行：
@@ -71,10 +62,8 @@ make docker-gateway-status
 一键安装/配置（含工具权限、acpx、exec approvals、node host 启动）：
 
 ```bash
-OPENCLAW_TELEGRAM_ALLOW_FROM=1871908422 make docker-fresh-bootstrap
+OPENCLAW_TELEGRAM_ALLOW_FROM=1871908422 make docker-official-bootstrap
 ```
-
-完整步骤与踩坑见 [docs/openclaw-fresh-docker-oneclick.md](docs/openclaw-fresh-docker-oneclick.md)。
 
 如果你想以官方镜像为基础来自定义自己的环境：
 

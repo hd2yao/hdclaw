@@ -46,7 +46,7 @@ RUN apt-get update -o Acquire::Retries=3 \
 RUN printf "node ALL=(ALL) NOPASSWD:ALL\n" > /etc/sudoers.d/90-node-nopasswd \
   && chmod 0440 /etc/sudoers.d/90-node-nopasswd
 
-COPY containers/openclaw-fresh/openclaw-container-init.sh /usr/local/bin/openclaw-container-init
+COPY containers/openclaw-official/openclaw-container-init.sh /usr/local/bin/openclaw-container-init
 COPY scripts/sglang-toolcall-adapter.mjs /usr/local/lib/openclaw/sglang-toolcall-adapter.mjs
 
 RUN chmod +x /usr/local/bin/openclaw-container-init \
