@@ -174,9 +174,11 @@ OPENCLAW_LOCAL_API_KEY=local-noauth
 # 不使用 Brave key 时建议关闭 web_search（避免 missing_brave_api_key）
 OPENCLAW_WEB_SEARCH_MODE=off
 
+# 默认直连上游模型；只有在上游仍输出文本 <tool_call> 时才启用 adapter
+OPENCLAW_LOCAL_TOOLCALL_ADAPTER=off
 # 可选：SGLang 工具调用适配（把 <tool_call> 转换为标准 tool_calls）
-OPENCLAW_LOCAL_TOOLCALL_ADAPTER=sglang
-OPENCLAW_LOCAL_TOOLCALL_ADAPTER_BASE_URL=http://127.0.0.1:31001/v1
+# OPENCLAW_LOCAL_TOOLCALL_ADAPTER=sglang
+# OPENCLAW_LOCAL_TOOLCALL_ADAPTER_BASE_URL=http://127.0.0.1:31001/v1
 # 可选：是否启用预压缩 memory flush（适配模式默认会自动关闭）
 OPENCLAW_MEMORY_FLUSH_ENABLED=false
 

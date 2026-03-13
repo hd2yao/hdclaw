@@ -60,11 +60,11 @@ OPENCLAW_SKIP_BUILD=1 make docker-fresh-bootstrap
 6. 如果容器里已安装 Python Playwright，则自动安装 Chromium 浏览器
 7. 启动 node host，并输出 `node.list` 状态
 8. 验证：
-   - `http://127.0.0.1:31001/v1/models`（SGLang adapter）
+   - `models.providers.local.baseUrl` 指向你配置的直连上游
    - `sudo -n whoami`
    - `python3 --version` / `pip3 --version`
    - `tools.exec` / `tools.elevated`
-   - 本地 provider 已切到 `http://127.0.0.1:31001/v1`
+   - 本地 provider 已切到你配置的直连 `OPENCLAW_LOCAL_BASE_URL`
    - 本地 qwen 模型参数中已写入 `chat_template_kwargs.enable_thinking=false`
    - `obsidian_vault` 挂载路径可见
 
@@ -83,17 +83,17 @@ OPENCLAW_SKIP_BUILD=1 make docker-fresh-bootstrap
 - 你当前上游 `http://192.168.6.230:30000/v1` 在 `enable_thinking=true` 时，经常长时间只输出 `reasoning_content`
 - Telegram 通道里这会表现成“bot 收到消息，但正文为空，最终没有回复”
 - 关闭 thinking 后，同一问题可以稳定直接产出正文
-- fresh docker 现在默认启用 SGLang toolcall adapter：
-  - adapter 监听 `http://127.0.0.1:31001/v1`
-  - 上游指向 `http://192.168.6.230:30000/v1`
-  - 用于把文本 `<tool_call>` 和异常流式输出转换为 OpenAI 兼容返回
+- fresh docker 现在默认直连上游 `http://192.168.6.230:30000/v1`
+- 只有当上游仍输出文本 `<tool_call>` 而不是原生 `tool_calls` 时，才需要显式启用 SGLang adapter
 
 如需覆盖默认值，可在 `.env.local` 中显式设置：
 
 ```bash
 OPENCLAW_LOCAL_MODEL_PARAMS_JSON='{"chat_template_kwargs":{"enable_thinking":false}}'
-OPENCLAW_LOCAL_TOOLCALL_ADAPTER=sglang
-OPENCLAW_LOCAL_TOOLCALL_ADAPTER_BASE_URL=http://127.0.0.1:31001/v1
+# 默认直连；仅在需要 adapter 时改成 sglang
+OPENCLAW_LOCAL_TOOLCALL_ADAPTER=off
+# OPENCLAW_LOCAL_TOOLCALL_ADAPTER=sglang
+# OPENCLAW_LOCAL_TOOLCALL_ADAPTER_BASE_URL=http://127.0.0.1:31001/v1
 SGLANG_UPSTREAM_BASE_URL=http://192.168.6.230:30000/v1
 ```
 
