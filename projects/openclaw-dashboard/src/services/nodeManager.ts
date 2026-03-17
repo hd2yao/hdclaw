@@ -18,7 +18,7 @@ export class NodeManager {
 
   start(): void {
     for (const node of nodeRepository.list()) {
-      this.registerNode({ id: node.id, name: node.name, url: node.url });
+      this.registerNode({ id: node.id, name: node.name, url: node.url, token: node.token });
     }
   }
 

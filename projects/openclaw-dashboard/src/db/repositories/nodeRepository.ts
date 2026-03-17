@@ -16,8 +16,15 @@ export const nodeRepository = {
     `).run({ ...input, now });
   },
 
-  list(): Array<{ id: string; name: string; url: string; status: string; last_seen_at: string | null }> {
-    return db.prepare('SELECT id, name, url, status, last_seen_at FROM nodes ORDER BY name ASC').all() as Array<{ id: string; name: string; url: string; status: string; last_seen_at: string | null }>;
+  list(): Array<{ id: string; name: string; url: string; token: string | null; status: string; last_seen_at: string | null }> {
+    return db.prepare('SELECT id, name, url, api_token as token, status, last_seen_at FROM nodes ORDER BY name ASC').all() as Array<{
+      id: string;
+      name: string;
+      url: string;
+      token: string | null;
+      status: string;
+      last_seen_at: string | null;
+    }>;
   },
 
   setStatus(nodeId: string, status: string, lastSeenAt?: string): void {

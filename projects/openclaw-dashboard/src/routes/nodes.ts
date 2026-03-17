@@ -23,7 +23,17 @@ nodeRouter.post('/nodes', (req, res) => {
   }
 
   const node = nodeManager.registerNode(parsed.data);
-  res.status(201).json({ item: node });
+  res.status(201).json({
+    item: {
+      id: node.id,
+      name: node.name,
+      url: node.url,
+      token: node.token ?? null,
+      status: node.status,
+      lastSeenAt: node.lastSeenAt ?? null,
+      reconnectAttempt: node.reconnectAttempt,
+    },
+  });
 });
 
 nodeRouter.get('/overview', (_req, res) => {

@@ -59,28 +59,38 @@ export const telemetryRepository = {
   },
 
   getOverview(): unknown {
-    const nodes = db.prepare('SELECT id, name, url, status, last_seen_at FROM nodes ORDER BY name ASC').all();
+    const nodes = db.prepare('SELECT id, name, url, status, last_seen_at FROM nodes ORDER BY name ASC').all() as Array<{
+      id: string;
+      name: string;
+      url: string;
+      status: string;
+      last_seen_at: string | null;
+    }>;
     const agents = db.prepare(`
-      SELECT node_id, status, COUNT(*) as count
+      SELECT node_id, agent_id, name, model, status
       FROM agents
-      GROUP BY node_id, status
-    `).all();
-    const sessions = db.prepare(`
-      SELECT node_id, status, COUNT(*) as count, SUM(queue_depth) as queue_depth
-      FROM sessions
-      GROUP BY node_id, status
-    `).all();
-    const latestResources = db.prepare(`
-      SELECT rs.*
-      FROM resource_snapshots rs
-      INNER JOIN (
-        SELECT node_id, MAX(collected_at) AS max_collected_at
-        FROM resource_snapshots
-        GROUP BY node_id
-      ) latest
-      ON latest.node_id = rs.node_id AND latest.max_collected_at = rs.collected_at
-    `).all();
+      ORDER BY name ASC
+    `).all() as Array<{
+      node_id: string;
+      agent_id: string;
+      name: string;
+      model: string | null;
+      status: string;
+    }>;
 
-    return { nodes, agents, sessions, latestResources };
+    return nodes.map((node) => ({
+      id: node.id,
+      name: node.name,
+      status: node.status === 'connected' ? 'online' : node.status === 'degraded' ? 'degraded' : 'offline',
+      lastSeenAt: node.last_seen_at,
+      agents: agents
+        .filter((agent) => agent.node_id === node.id)
+        .map((agent) => ({
+          id: agent.agent_id,
+          name: agent.name,
+          model: agent.model ?? 'unknown',
+          status: agent.status,
+        })),
+    }));
   },
 };
