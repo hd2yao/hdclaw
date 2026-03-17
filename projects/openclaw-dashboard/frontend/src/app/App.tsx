@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react';
 
+const API_BASE_URL = import.meta.env.VITE_DASHBOARD_HTTP_URL ?? 'http://127.0.0.1:3000/api';
+const API_TOKEN = import.meta.env.VITE_DASHBOARD_API_TOKEN ?? 'dev-key-for-testing';
+
 interface Node {
   id: string;
   name: string;
   status: string;
+  lastSeenAt?: string | null;
   agents: Array<{
     id: string;
     name: string;
@@ -19,14 +23,14 @@ export default function App() {
   useEffect(() => {
     const fetchOverview = async () => {
       try {
-        const res = await fetch('http://localhost:3000/api/overview', {
+        const res = await fetch(`${API_BASE_URL}/overview`, {
           headers: {
-            'Authorization': 'Bearer dev-key-for-testing',
+            'Authorization': `Bearer ${API_TOKEN}`,
           },
         });
         if (!res.ok) throw new Error('Failed to fetch');
-        const data = await res.json();
-        setNodes(data);
+        const data = (await res.json()) as Node[];
+        setNodes(Array.isArray(data) ? data : []);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');
       } finally {
@@ -67,16 +71,20 @@ export default function App() {
               <div className="mb-4">
                 <p className="text-sm text-gray-600">Total Agents</p>
                 <p className="text-3xl font-bold">{node.agents.length}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Last seen: {node.lastSeenAt ? new Date(node.lastSeenAt).toLocaleString() : 'n/a'}
+                </p>
               </div>
 
               <div className="border-t pt-4">
                 <h3 className="text-sm font-medium mb-2">Model Distribution</h3>
                 <div className="space-y-1">
                   {Object.entries(
-                    node.agents.reduce((acc: any, agent) => {
-                      acc[agent.model] = (acc[agent.model] || 0) + 1;
+                    node.agents.reduce<Record<string, number>>((acc, agent) => {
+                      const model = agent.model || 'unknown';
+                      acc[model] = (acc[model] || 0) + 1;
                       return acc;
-                    }, {})
+                    }, {}),
                   ).map(([model, count]) => (
                     <div key={model} className="flex justify-between text-sm">
                       <span className="text-gray-600 truncate">{model}</span>

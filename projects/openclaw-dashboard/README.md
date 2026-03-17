@@ -264,6 +264,70 @@ npm install
 npm run dev
 ```
 
+### 宿主机本地开发
+
+这个仓库里的迁移版默认按“宿主机起前后端，接入 Docker 里的 OpenClaw 节点”来跑。不要再访问容器内部 `172.17.x.x` 地址，浏览器应访问宿主机端口。
+
+1. 后端
+
+```bash
+cd /Users/dysania/program/openclaw/projects/openclaw-dashboard
+cp .env.example .env
+npm install
+PORT=3000 DASHBOARD_API_TOKEN=dev-key-for-testing DASHBOARD_DB_PATH=./data/dashboard.db npm run dev
+```
+
+2. 前端
+
+```bash
+cd /Users/dysania/program/openclaw/projects/openclaw-dashboard/frontend
+cp .env.example .env
+npm install
+npm run dev -- --host 127.0.0.1
+```
+
+3. 浏览器访问
+
+```text
+http://127.0.0.1:5173
+```
+
+### 接入 `openclaw-official-openclaw-1`
+
+先拿到 OpenClaw dashboard URL 里的长 token，再把节点注册进 dashboard 后端：
+
+```bash
+docker exec openclaw-official-openclaw-1 openclaw dashboard --no-open
+```
+
+上面的命令会输出一个类似下面的 URL：
+
+```text
+http://127.0.0.1:18890/?token=...
+```
+
+把 `token=` 后面的完整值填进下面命令：
+
+```bash
+curl -X POST http://127.0.0.1:3000/api/nodes \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer dev-key-for-testing' \
+  -d '{
+    "name": "openclaw-official-openclaw-1",
+    "url": "ws://127.0.0.1:18890",
+    "token": "PASTE_DASHBOARD_URL_TOKEN_HERE"
+  }'
+```
+
+验证 overview：
+
+```bash
+curl -H 'Authorization: Bearer dev-key-for-testing' \
+  http://127.0.0.1:3000/api/overview
+```
+
+如果返回节点状态 `online` 且包含 agents 列表，说明 dashboard 已经成功接入当前 Docker 里的 OpenClaw。
+
 ## 下一步建议
 
 1. 把 `OpenClawRpcClient` 换成真实 OpenClaw JSON-RPC method 调用

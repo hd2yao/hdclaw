@@ -3,14 +3,14 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
-check_port() {
-  local port="$1"
+check_url() {
+  local url="$1"
 
-  if curl -fsS --max-time 2 "http://127.0.0.1:${port}" >/dev/null 2>&1; then
+  if curl -fsS --max-time 2 "${url}" >/dev/null 2>&1; then
     return 0
   fi
 
-  echo "port ${port} is not serving HTTP on 127.0.0.1" >&2
+  echo "url ${url} is not serving the expected response" >&2
   return 1
 }
 
@@ -21,9 +21,15 @@ echo "[dashboard-smoke] checking frontend dependencies"
 )
 
 echo "[dashboard-smoke] checking backend port"
-check_port 3000
+check_url "http://127.0.0.1:3000/api/health"
 
 echo "[dashboard-smoke] checking frontend port"
-check_port 5173
+check_url "http://127.0.0.1:5173/"
+
+echo "[dashboard-smoke] checking frontend entrypoint"
+if ! curl -fsS --max-time 2 "http://127.0.0.1:5173/" | grep -q '<div id="root"></div>'; then
+  echo "frontend entrypoint is still serving the placeholder shell" >&2
+  exit 1
+fi
 
 echo "[dashboard-smoke] passed"
