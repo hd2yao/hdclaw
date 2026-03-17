@@ -99,28 +99,29 @@ http://127.0.0.1:4173/monitoring-panel.html
 当前状态：
 
 - 本地高保真原型和 handoff 文档已完成
-- `generate_figma_design` 在本次执行中两次命中 Figma MCP 传输层错误，暂未成功回填 file URL / node ID
-- 一旦 Figma MCP 恢复，优先执行本地原型导入，再补全下面表格
+- 当前已通过 Figma MCP 成功把本地原型导入 Figma
+- file URL / file key 已回填
+- 部分关键 frame 的 node ID 已从 metadata 确认，剩余项继续补齐
 
 ### File
 
-- Figma file URL: `TBD`
-- Figma file key: `TBD`
+- Figma file URL: [OpenClaw Monitoring Panel Prototype](https://www.figma.com/design/YUEs7YciblbhlZI3DwCGHj)
+- Figma file key: `YUEs7YciblbhlZI3DwCGHj`
 
 ### Key Frames
 
 | Page | Variant | Figma URL | Node ID |
 |------|---------|-----------|---------|
-| Dashboard Overview | Desktop | `TBD` | `TBD` |
+| Dashboard Overview | Desktop | [OpenClaw Monitoring Panel Prototype](https://www.figma.com/design/YUEs7YciblbhlZI3DwCGHj?node-id=1-28) | `1:28` |
 | Dashboard Overview | Tablet | `TBD` | `TBD` |
 | Dashboard Overview | Mobile | `TBD` | `TBD` |
 | Node Detail | Desktop | `TBD` | `TBD` |
 | Node Detail | Mobile | `TBD` | `TBD` |
 | Agent Work Detail / Timeline | Desktop | `TBD` | `TBD` |
 | Agent Work Detail / Timeline | Tablet | `TBD` | `TBD` |
-| Agent Work Detail / Timeline | Mobile | `TBD` | `TBD` |
-| Alerts / Events | Desktop | `TBD` | `TBD` |
-| Alerts / Events | Mobile | `TBD` | `TBD` |
+| Agent Work Detail / Timeline | Mobile | [OpenClaw Monitoring Panel Prototype](https://www.figma.com/design/YUEs7YciblbhlZI3DwCGHj?node-id=1-842) | `1:842` |
+| Alerts / Events | Desktop | [OpenClaw Monitoring Panel Prototype](https://www.figma.com/design/YUEs7YciblbhlZI3DwCGHj?node-id=1-878) | `1:878` |
+| Alerts / Events | Mobile | [OpenClaw Monitoring Panel Prototype](https://www.figma.com/design/YUEs7YciblbhlZI3DwCGHj?node-id=1-1025) | `1:1025` |
 
 ### Capture Notes
 
@@ -128,6 +129,7 @@ http://127.0.0.1:4173/monitoring-panel.html
 - Figma 中应保留 `Wireframes`、`Hi-Fi`、`Components`、`Tokens` 四个 page。
 - 若导入后的 frame 结构需要整理，允许在 Figma 内重新排版，但不能改变关键布局与 token 定义。
 - 实现阶段必须用最终批准的 frame / node ID 做 Figma MCP 对齐，不允许脱稿重画。
+- 当前导入结果是单文件长画布；若后续在 Figma 内拆 page 或重构 frame，必须同步更新这里的 URL / node ID。
 
 ## Validation Checklist
 
