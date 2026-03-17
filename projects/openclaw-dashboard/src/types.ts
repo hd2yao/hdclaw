@@ -1,5 +1,7 @@
 export type NodeStatus = 'disconnected' | 'connecting' | 'connected' | 'degraded';
 export type AgentStatus = 'idle' | 'busy' | 'offline' | 'unknown';
+export type TimelineWindow = '1h' | '24h';
+export type DashboardNodeHealth = 'online' | 'degraded' | 'offline';
 
 export interface ManagedNode {
   id: string;
@@ -32,6 +34,11 @@ export interface AgentSnapshot {
   configJson: string | null;
   status: AgentStatus;
   busy: boolean;
+  taskSummary: string | null;
+  taskPhase: string | null;
+  taskStartedAt: string | null;
+  lastProgressAt: string | null;
+  staleReason: string | null;
   updatedAt: string;
 }
 
@@ -40,6 +47,10 @@ export interface SessionSnapshot {
   sessionId: string;
   agentId: string | null;
   status: string;
+  taskSummary: string | null;
+  taskPhase: string | null;
+  taskStartedAt: string | null;
+  lastProgressAt: string | null;
   queueDepth: number;
   updatedAt: string;
 }
@@ -64,4 +75,76 @@ export interface DashboardEvent<T = unknown> {
   type: string;
   ts: string;
   payload: T;
+}
+
+export interface AgentTimelineEvent {
+  id?: number;
+  nodeId: string;
+  agentId: string;
+  sessionId: string | null;
+  eventType: string;
+  summary: string;
+  detail: string | null;
+  status: string | null;
+  createdAt: string;
+}
+
+export interface DashboardAgentSummary {
+  id: string;
+  name: string;
+  model: string | null;
+  workspace: string | null;
+  status: string;
+  busy: boolean;
+  taskSummary: string | null;
+  taskPhase: string | null;
+  taskStartedAt: string | null;
+  lastProgressAt: string | null;
+  staleReason: string | null;
+  updatedAt: string;
+}
+
+export interface DashboardNodeResources extends ResourceSnapshot {
+  collectedAt: string;
+}
+
+export interface DashboardGatewayState extends GatewaySnapshot {
+  collectedAt: string;
+}
+
+export interface DashboardNodeState {
+  id: string;
+  name: string;
+  url: string;
+  status: DashboardNodeHealth;
+  lastSeenAt: string | null;
+  gateway: DashboardGatewayState | null;
+  resources: DashboardNodeResources | null;
+  messages: MessageCounterSnapshot | null;
+}
+
+export interface DashboardOverviewNode extends DashboardNodeState {
+  agents: DashboardAgentSummary[];
+}
+
+export interface DashboardSummary {
+  nodeCount: number;
+  onlineNodes: number;
+  degradedNodes: number;
+  offlineNodes: number;
+  busyAgents: number;
+  idleAgents: number;
+  staleAgents: number;
+  outputsLastHour: number;
+}
+
+export interface DashboardOverviewResponse {
+  generatedAt: string;
+  summary: DashboardSummary;
+  nodes: DashboardOverviewNode[];
+}
+
+export interface DashboardNodeDetail extends DashboardNodeState {
+  agents: DashboardAgentSummary[];
+  resourceHistory: DashboardNodeResources[];
 }

@@ -321,6 +321,11 @@ export class OpenClawRpcClient {
           configJson: null,
           status: 'idle',
           busy: false,
+          taskSummary: null,
+          taskPhase: null,
+          taskStartedAt: null,
+          lastProgressAt: null,
+          staleReason: null,
           updatedAt: collectedAt,
         };
       });
@@ -332,6 +337,10 @@ export class OpenClawRpcClient {
       sessionId: session.sessionId ?? session.key ?? collectedAt,
       agentId: extractAgentId(session.key),
       status: session.abortedLastRun ? 'error' : session.kind ?? 'running',
+      taskSummary: null,
+      taskPhase: null,
+      taskStartedAt: null,
+      lastProgressAt: null,
       queueDepth: 0,
       updatedAt: asIsoDate(session.updatedAt, collectedAt),
     }));
