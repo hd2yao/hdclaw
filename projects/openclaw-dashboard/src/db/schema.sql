@@ -1,6 +1,11 @@
 PRAGMA journal_mode = WAL;
 PRAGMA foreign_keys = ON;
 
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  name TEXT PRIMARY KEY,
+  applied_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS nodes (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -44,6 +49,11 @@ CREATE TABLE IF NOT EXISTS agents (
   config_json TEXT,
   status TEXT NOT NULL,
   busy INTEGER NOT NULL DEFAULT 0,
+  task_summary TEXT,
+  task_phase TEXT,
+  task_started_at TEXT,
+  last_progress_at TEXT,
+  stale_reason TEXT,
   last_seen_at TEXT NOT NULL,
   UNIQUE(node_id, agent_id),
   FOREIGN KEY (node_id) REFERENCES nodes(id) ON DELETE CASCADE
@@ -56,6 +66,10 @@ CREATE TABLE IF NOT EXISTS sessions (
   session_id TEXT NOT NULL,
   agent_id TEXT,
   status TEXT NOT NULL,
+  task_summary TEXT,
+  task_phase TEXT,
+  task_started_at TEXT,
+  last_progress_at TEXT,
   queue_depth INTEGER NOT NULL DEFAULT 0,
   last_seen_at TEXT NOT NULL,
   UNIQUE(node_id, session_id),
@@ -80,3 +94,19 @@ CREATE TABLE IF NOT EXISTS events (
   FOREIGN KEY (node_id) REFERENCES nodes(id) ON DELETE SET NULL
 );
 CREATE INDEX IF NOT EXISTS idx_events_type_time ON events(event_type, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS agent_timeline_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  node_id TEXT NOT NULL,
+  agent_id TEXT NOT NULL,
+  session_id TEXT,
+  event_type TEXT NOT NULL,
+  summary TEXT NOT NULL,
+  detail TEXT,
+  status TEXT,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (node_id) REFERENCES nodes(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_agent_timeline_events_agent_time ON agent_timeline_events(agent_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_agent_timeline_events_node_time ON agent_timeline_events(node_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_agent_timeline_events_node_agent_time ON agent_timeline_events(node_id, agent_id, created_at DESC);
