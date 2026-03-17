@@ -165,6 +165,34 @@ npm install
 npm run dev
 ```
 
+## 设计到代码工作流
+
+### Figma 设计源
+
+- 设计源文档： [2026-03-17-openclaw-monitoring-panel-figma-design.md](/Users/dysania/program/openclaw/.worktrees/codex-openclaw-monitoring-panel-delivery/docs/plans/2026-03-17-openclaw-monitoring-panel-figma-design.md)
+- 本地原型 HTML： [monitoring-panel.html](/Users/dysania/program/openclaw/.worktrees/codex-openclaw-monitoring-panel-delivery/projects/openclaw-dashboard/frontend/design-prototype/monitoring-panel.html)
+- 本地原型 CSS： [monitoring-panel.css](/Users/dysania/program/openclaw/.worktrees/codex-openclaw-monitoring-panel-delivery/projects/openclaw-dashboard/frontend/design-prototype/monitoring-panel.css)
+
+### 本地高保真预览
+
+```bash
+cd /Users/dysania/program/openclaw/.worktrees/codex-openclaw-monitoring-panel-delivery/projects/openclaw-dashboard/frontend/design-prototype
+python3 -m http.server 4173
+```
+
+然后访问：
+
+```text
+http://127.0.0.1:4173/monitoring-panel.html
+```
+
+### 实现约束
+
+- 先由本地高保真原型生成 Figma 文件，再在 Figma 中整理 `Wireframes`、`Hi-Fi`、`Components`、`Tokens`
+- 设计文档必须记录 Figma file URL、关键 frame URL 和 node ID
+- 进入真实实现前，用 Figma MCP 的 `get_design_context` 和 `get_screenshot` 对准批准后的 frame
+- 允许复用现有 React 组件，但视觉结构和 token 不能脱离批准稿自由发挥
+
 ## 下一步
 
 - 接入真实 backend WebSocket 协议

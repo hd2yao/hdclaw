@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OpenClaw Monitoring Panel Figma Prototype</title>
+    <link rel="stylesheet" href="./monitoring-panel.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <div>
+        <p class="eyebrow">OpenClaw readonly monitoring</p>
+        <h1>Signal Desk Prototype</h1>
+        <p class="intro">
+          One long capture source for the four required pages and their responsive variants:
+          overview, node detail, agent timeline, and alerts.
+        </p>
+      </div>
+      <div class="hero-note">
+        <span>Audience</span>
+        <strong>Ops + non-technical viewers</strong>
+        <span>Cadence</span>
+        <strong>1-2 second refresh</strong>
+      </div>
+    </header>
+
+    <main class="artboard-grid">
+      <section class="artboard desktop">
+        <div class="artboard-title">
+          <span>Dashboard Overview</span>
+          <strong>Desktop / 1440</strong>
+        </div>
+        <div class="dashboard-shell">
+          <aside class="node-rail">
+            <div class="rail-header">
+              <p>Node Fleet</p>
+              <span>7 online / 2 degraded</span>
+            </div>
+            <article class="node-card active">
+              <div>
+                <strong>Singapore Gateway</strong>
+                <span>Heartbeat 2s ago</span>
+              </div>
+              <span class="badge badge-ok">healthy</span>
+            </article>
+            <article class="node-card">
+              <div>
+                <strong>Frankfurt Edge</strong>
+                <span>CPU spike · 84%</span>
+              </div>
+              <span class="badge badge-warn">degraded</span>
+            </article>
+            <article class="node-card">
+              <div>
+                <strong>Virginia Core</strong>
+                <span>No heartbeat · 38s</span>
+              </div>
+              <span class="badge badge-off">offline</span>
+            </article>
+            <div class="rail-footer">
+              <p>Recent output</p>
+              <ul>
+                <li>Research summary shipped by `agent-sg-14`</li>
+                <li>Telegram digest posted by `agent-fr-04`</li>
+                <li>2 tasks stalled over 10 minutes</li>
+              </ul>
+            </div>
+          </aside>
+
+          <div class="dashboard-main">
+            <div class="command-bar">
+              <div>
+                <p class="eyebrow">OpenClaw Command Desk</p>
+                <h2>Business pulse first, operations detail underneath</h2>
+              </div>
+              <div class="command-pills">
+                <span class="chip">WS connected</span>
+                <span class="chip">refreshing</span>
+                <span class="chip chip-ghost">2 stale agents</span>
+              </div>
+            </div>
+
+            <section class="summary-row">
+              <article class="summary-card">
+                <span>Online nodes</span>
+                <strong>11</strong>
+                <small>Across 3 regions</small>
+              </article>
+              <article class="summary-card accent">
+                <span>Working agents</span>
+                <strong>182</strong>
+                <small>27 publishing now</small>
+              </article>
+              <article class="summary-card">
+                <span>Active incidents</span>
+                <strong>06</strong>
+                <small>2 critical / 4 warning</small>
+              </article>
+              <article class="summary-card">
+                <span>Recent outputs</span>
+                <strong>34</strong>
+                <small>Last 60 minutes</small>
+              </article>
+            </section>
+
+            <section class="overview-grid">
+              <article class="panel panel-light">
+                <div class="panel-head">
+                  <div>
+                    <p class="eyebrow">Selected node</p>
+                    <h3>Singapore Gateway</h3>
+                  </div>
+                  <span class="badge badge-ok">healthy</span>
+                </div>
+                <div class="meta-grid">
+                  <div><span>Endpoint</span><strong>ws://sg-core-01:18789</strong></div>
+                  <div><span>Agents</span><strong>38 / 42 online</strong></div>
+                  <div><span>Messages</span><strong>12.4k / h</strong></div>
+                  <div><span>Last drift</span><strong>none in 24h</strong></div>
+                </div>
+              </article>
+
+              <article class="panel panel-dark">
+                <div class="panel-head">
+                  <div>
+                    <p class="eyebrow">Resource trend</p>
+                    <h3>CPU / memory / queue depth</h3>
+                  </div>
+                  <span class="chip chip-ghost">last 24m</span>
+                </div>
+                <div class="chart-surface">
+                  <div class="mountain mountain-one"></div>
+                  <div class="mountain mountain-two"></div>
+                  <div class="mountain mountain-three"></div>
+                </div>
+              </article>
+            </section>
+
+            <section class="detail-grid">
+              <article class="panel panel-light">
+                <div class="panel-head">
+                  <div>
+                    <p class="eyebrow">Agent board</p>
+                    <h3>Live work summary</h3>
+                  </div>
+                  <span class="chip">38 agents</span>
+                </div>
+                <table class="agent-table">
+                  <thead>
+                    <tr>
+                      <th>Agent</th>
+                      <th>Status</th>
+                      <th>Task</th>
+                      <th>Stage</th>
+                      <th>Duration</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>agent-sg-14</td>
+                      <td><span class="badge badge-ok">busy</span></td>
+                      <td>Compile AI policy digest</td>
+                      <td>summarizing</td>
+                      <td>08:41</td>
+                    </tr>
+                    <tr>
+                      <td>agent-sg-03</td>
+                      <td><span class="badge badge-warn">stalled</span></td>
+                      <td>Retry Telegram media upload</td>
+                      <td>waiting IO</td>
+                      <td>12:12</td>
+                    </tr>
+                    <tr>
+                      <td>agent-sg-19</td>
+                      <td><span class="badge badge-ok">busy</span></td>
+                      <td>Draft claw sync notes</td>
+                      <td>writing</td>
+                      <td>03:09</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </article>
+
+              <article class="panel panel-dark timeline-panel">
+                <div class="panel-head">
+                  <div>
+                    <p class="eyebrow">Selected timeline</p>
+                    <h3>agent-sg-14</h3>
+                  </div>
+                  <span class="chip">1h window</span>
+                </div>
+                <ul class="timeline">
+                  <li><span>10:42</span><strong>Publishing queued</strong><p>Output package staged for review channel.</p></li>
+                  <li><span>10:38</span><strong>Summary rewritten</strong><p>Compressed from 9 bullets to 4 executive points.</p></li>
+                  <li><span>10:31</span><strong>Source fetch complete</strong><p>18 links normalized and deduplicated.</p></li>
+                  <li><span>10:27</span><strong>Task accepted</strong><p>Priority promoted to urgent by scheduler.</p></li>
+                </ul>
+              </article>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <section class="artboard tablet">
+        <div class="artboard-title">
+          <span>Dashboard Overview</span>
+          <strong>Tablet / 1024</strong>
+        </div>
+        <div class="stack-shell">
+          <section class="summary-row compact">
+            <article class="summary-card"><span>Nodes</span><strong>11</strong></article>
+            <article class="summary-card accent"><span>Busy agents</span><strong>182</strong></article>
+            <article class="summary-card"><span>Incidents</span><strong>06</strong></article>
+          </section>
+          <section class="panel panel-light">
+            <div class="panel-head"><h3>Singapore Gateway</h3><span class="badge badge-ok">healthy</span></div>
+            <div class="meta-grid compact">
+              <div><span>Endpoint</span><strong>sg-core-01</strong></div>
+              <div><span>Heartbeat</span><strong>2s ago</strong></div>
+              <div><span>Messages</span><strong>12.4k/h</strong></div>
+              <div><span>Queue</span><strong>normal</strong></div>
+            </div>
+          </section>
+          <section class="panel panel-dark">
+            <div class="panel-head"><h3>Trend</h3><span class="chip">24m</span></div>
+            <div class="chart-surface short">
+              <div class="mountain mountain-one"></div>
+              <div class="mountain mountain-two"></div>
+            </div>
+          </section>
+          <section class="panel panel-light">
+            <div class="panel-head"><h3>Agent board</h3><span class="chip">selected node</span></div>
+            <div class="list-card">agent-sg-14 · busy · Compile AI policy digest</div>
+            <div class="list-card">agent-sg-03 · stalled · Retry Telegram upload</div>
+            <div class="list-card">agent-sg-19 · busy · Draft claw sync notes</div>
+          </section>
+        </div>
+      </section>
+
+      <section class="artboard mobile">
+        <div class="artboard-title">
+          <span>Dashboard Overview</span>
+          <strong>Mobile / 390</strong>
+        </div>
+        <div class="mobile-shell">
+          <section class="panel panel-light">
+            <p class="eyebrow">Business pulse</p>
+            <h3>182 agents are working</h3>
+            <div class="mobile-metrics">
+              <div><span>Nodes</span><strong>11</strong></div>
+              <div><span>Incidents</span><strong>06</strong></div>
+              <div><span>Outputs</span><strong>34</strong></div>
+            </div>
+          </section>
+          <section class="panel panel-dark">
+            <div class="panel-head"><h3>Node rail</h3><span class="chip">3 visible</span></div>
+            <div class="list-card dark">Singapore Gateway · healthy</div>
+            <div class="list-card dark">Frankfurt Edge · degraded</div>
+            <div class="list-card dark">Virginia Core · offline</div>
+          </section>
+          <section class="panel panel-light">
+            <div class="panel-head"><h3>Selected agent</h3><span class="badge badge-ok">busy</span></div>
+            <p class="mobile-copy">agent-sg-14 is summarizing policy changes and preparing an output package.</p>
+          </section>
+        </div>
+      </section>
+
+      <section class="artboard desktop">
+        <div class="artboard-title">
+          <span>Node Detail</span>
+          <strong>Desktop / 1440</strong>
+        </div>
+        <div class="node-detail-board">
+          <article class="panel panel-light hero-panel">
+            <div>
+              <p class="eyebrow">Node detail</p>
+              <h3>Frankfurt Edge</h3>
+              <p>Focused recovery page for one problematic node.</p>
+            </div>
+            <div class="hero-stats">
+              <div><span>Status</span><strong>degraded</strong></div>
+              <div><span>Agents</span><strong>71 / 84</strong></div>
+              <div><span>Incident age</span><strong>14m</strong></div>
+            </div>
+          </article>
+          <div class="two-col">
+            <article class="panel panel-dark">
+              <div class="panel-head"><h3>Resource drift</h3><span class="chip chip-ghost">CPU saturation</span></div>
+              <div class="chart-surface tall">
+                <div class="mountain mountain-two"></div>
+                <div class="mountain mountain-three"></div>
+              </div>
+            </article>
+            <article class="panel panel-light">
+              <div class="panel-head"><h3>Recent anomalies</h3><span class="badge badge-warn">4 warning</span></div>
+              <ul class="event-feed">
+                <li><strong>Queue lag crossed 90s</strong><span>10:44</span></li>
+                <li><strong>Reconnected after RPC timeout</strong><span>10:31</span></li>
+                <li><strong>Resource sample missing</strong><span>10:29</span></li>
+                <li><strong>Upload session retried</strong><span>10:23</span></li>
+              </ul>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="artboard mobile">
+        <div class="artboard-title">
+          <span>Node Detail</span>
+          <strong>Mobile / 390</strong>
+        </div>
+        <div class="mobile-shell">
+          <section class="panel panel-light">
+            <p class="eyebrow">Node detail</p>
+            <h3>Frankfurt Edge</h3>
+            <div class="mobile-metrics">
+              <div><span>Status</span><strong>degraded</strong></div>
+              <div><span>Agents</span><strong>71</strong></div>
+              <div><span>Lag</span><strong>90s</strong></div>
+            </div>
+          </section>
+          <section class="panel panel-dark">
+            <div class="panel-head"><h3>Recent anomalies</h3><span class="badge badge-warn">4</span></div>
+            <div class="list-card dark">Queue lag crossed 90s</div>
+            <div class="list-card dark">Reconnected after RPC timeout</div>
+          </section>
+        </div>
+      </section>
+
+      <section class="artboard desktop">
+        <div class="artboard-title">
+          <span>Agent Work Detail / Timeline</span>
+          <strong>Desktop / 1440</strong>
+        </div>
+        <div class="agent-detail-board">
+          <article class="panel panel-light hero-panel">
+            <div>
+              <p class="eyebrow">Agent focus</p>
+              <h3>agent-sg-14</h3>
+              <p>Current work, duration, task summary and the last hour of execution history.</p>
+            </div>
+            <div class="hero-stats">
+              <div><span>Status</span><strong>busy</strong></div>
+              <div><span>Task</span><strong>AI policy digest</strong></div>
+              <div><span>Duration</span><strong>08:41</strong></div>
+            </div>
+          </article>
+          <div class="two-col wide-right">
+            <article class="panel panel-light">
+              <div class="panel-head"><h3>Readable brief</h3><span class="chip">For non-technical viewers</span></div>
+              <p class="lead-copy">This agent is summarizing regulatory updates and preparing a short publishable brief for the daily operations channel.</p>
+              <div class="summary-block">
+                <div><span>Current stage</span><strong>summarizing</strong></div>
+                <div><span>Started at</span><strong>10:27</strong></div>
+                <div><span>Last progress</span><strong>10:42</strong></div>
+              </div>
+            </article>
+            <article class="panel panel-dark">
+              <div class="panel-head"><h3>Timeline</h3><span class="chip">1h / 24h</span></div>
+              <ul class="timeline dense">
+                <li><span>10:42</span><strong>Publishing queued</strong><p>Package moved to review stage.</p></li>
+                <li><span>10:38</span><strong>Summary rewritten</strong><p>Output tightened for executive tone.</p></li>
+                <li><span>10:31</span><strong>Source fetch complete</strong><p>18 sources deduplicated.</p></li>
+                <li><span>10:27</span><strong>Task accepted</strong><p>Priority promoted to urgent.</p></li>
+                <li><span>10:19</span><strong>Idle cleared</strong><p>Reassigned from backlog.</p></li>
+              </ul>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="artboard tablet">
+        <div class="artboard-title">
+          <span>Agent Work Detail / Timeline</span>
+          <strong>Tablet / 1024</strong>
+        </div>
+        <div class="stack-shell">
+          <section class="panel panel-light">
+            <div class="panel-head"><h3>agent-sg-14</h3><span class="badge badge-ok">busy</span></div>
+            <p class="lead-copy">Summarizing policy changes for the morning operations brief.</p>
+          </section>
+          <section class="panel panel-dark">
+            <div class="panel-head"><h3>Timeline</h3><span class="chip">1h</span></div>
+            <ul class="timeline dense">
+              <li><span>10:42</span><strong>Publishing queued</strong><p>Package moved to review stage.</p></li>
+              <li><span>10:38</span><strong>Summary rewritten</strong><p>Output tightened for executive tone.</p></li>
+              <li><span>10:31</span><strong>Source fetch complete</strong><p>18 sources deduplicated.</p></li>
+            </ul>
+          </section>
+        </div>
+      </section>
+
+      <section class="artboard mobile">
+        <div class="artboard-title">
+          <span>Agent Work Detail / Timeline</span>
+          <strong>Mobile / 390</strong>
+        </div>
+        <div class="mobile-shell">
+          <section class="panel panel-light">
+            <p class="eyebrow">Agent detail</p>
+            <h3>agent-sg-14</h3>
+            <p class="mobile-copy">Summarizing policy changes and preparing a publishable brief.</p>
+          </section>
+          <section class="panel panel-dark">
+            <div class="panel-head"><h3>Timeline</h3><span class="chip">1h</span></div>
+            <div class="list-card dark">10:42 · Publishing queued</div>
+            <div class="list-card dark">10:38 · Summary rewritten</div>
+            <div class="list-card dark">10:31 · Source fetch complete</div>
+          </section>
+        </div>
+      </section>
+
+      <section class="artboard desktop">
+        <div class="artboard-title">
+          <span>Alerts / Events</span>
+          <strong>Desktop / 1440</strong>
+        </div>
+        <div class="alerts-board">
+          <article class="panel panel-light">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Events console</p>
+                <h3>Incidents with enough context to act</h3>
+              </div>
+              <div class="command-pills">
+                <span class="chip">all</span>
+                <span class="chip chip-ghost">warning</span>
+                <span class="chip chip-ghost">critical</span>
+                <span class="chip chip-ghost">recovered</span>
+              </div>
+            </div>
+            <div class="alerts-layout">
+              <div class="alert-list">
+                <article class="alert-item active critical">
+                  <div>
+                    <span class="eyebrow">critical · Frankfurt Edge</span>
+                    <strong>Queue lag exceeded 90 seconds</strong>
+                    <p>Detected on agent-fr-04 while export tasks were retrying.</p>
+                  </div>
+                  <span>10:44</span>
+                </article>
+                <article class="alert-item warning">
+                  <div>
+                    <span class="eyebrow">warning · Virginia Core</span>
+                    <strong>Node heartbeat is stale</strong>
+                    <p>No successful poll in the last 38 seconds.</p>
+                  </div>
+                  <span>10:41</span>
+                </article>
+                <article class="alert-item recovered">
+                  <div>
+                    <span class="eyebrow">recovered · Singapore Gateway</span>
+                    <strong>RPC timeout cleared</strong>
+                    <p>Recovered after two retries with no user-visible impact.</p>
+                  </div>
+                  <span>10:30</span>
+                </article>
+              </div>
+
+              <aside class="panel panel-dark detail-card">
+                <div class="panel-head">
+                  <div>
+                    <p class="eyebrow">Alert detail</p>
+                    <h3>Queue lag exceeded 90 seconds</h3>
+                  </div>
+                  <span class="badge badge-off">critical</span>
+                </div>
+                <div class="meta-grid compact">
+                  <div><span>Node</span><strong>Frankfurt Edge</strong></div>
+                  <div><span>Agent</span><strong>agent-fr-04</strong></div>
+                  <div><span>Started</span><strong>10:38</strong></div>
+                  <div><span>Recovered</span><strong>No</strong></div>
+                </div>
+                <p class="detail-copy">
+                  Retry pressure from media upload tasks caused the queue to stall. Node remained
+                  connected, but downstream publish latency crossed the human-visible threshold.
+                </p>
+                <ul class="timeline dense">
+                  <li><span>10:44</span><strong>Critical threshold crossed</strong><p>Queue lag moved beyond 90 seconds.</p></li>
+                  <li><span>10:41</span><strong>Warning raised</strong><p>Retry bursts began after RPC timeout.</p></li>
+                  <li><span>10:38</span><strong>Retry loop detected</strong><p>Media upload worker re-entered queue.</p></li>
+                </ul>
+              </aside>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="artboard mobile">
+        <div class="artboard-title">
+          <span>Alerts / Events</span>
+          <strong>Mobile / 390</strong>
+        </div>
+        <div class="mobile-shell">
+          <section class="panel panel-light">
+            <div class="panel-head"><h3>Alerts</h3><span class="badge badge-off">6 active</span></div>
+            <div class="list-card critical">critical · Queue lag exceeded 90 seconds</div>
+            <div class="list-card warning">warning · Node heartbeat is stale</div>
+            <div class="list-card recovered">recovered · RPC timeout cleared</div>
+          </section>
+          <section class="panel panel-dark">
+            <div class="panel-head"><h3>Detail</h3><span class="chip">agent-fr-04</span></div>
+            <p class="mobile-copy">Retry pressure from media upload tasks caused downstream publish latency to cross the human-visible threshold.</p>
+          </section>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
