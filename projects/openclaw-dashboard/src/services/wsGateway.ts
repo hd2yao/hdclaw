@@ -35,7 +35,7 @@ export class DashboardWsGateway {
   private sanitizePayload(payload: any): any {
     if (payload === null || typeof payload !== 'object') return payload;
     if (Array.isArray(payload)) return payload.map(p => this.sanitizePayload(p));
-    
+
     const result: any = {};
     for (const [key, value] of Object.entries(payload)) {
       // 跳过可能包含循环引用的字段
