@@ -2,4 +2,5 @@
 .envrc
 *.log
 .tmp/
+.worktrees/
 .DS_Store
