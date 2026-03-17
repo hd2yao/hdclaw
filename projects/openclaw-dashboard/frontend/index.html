@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OpenClaw Dashboard</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0b1020;
+        --panel: #121a31;
+        --muted: #8da2c0;
+        --text: #ecf3ff;
+        --accent: #5eead4;
+        --danger: #fb7185;
+      }
+      body { margin: 0; font-family: Inter, Arial, sans-serif; background: linear-gradient(135deg, #0b1020, #111827); color: var(--text); }
+      .wrap { max-width: 1080px; margin: 0 auto; padding: 40px 20px; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+      .card { background: rgba(18,26,49,.9); border: 1px solid rgba(141,162,192,.18); border-radius: 16px; padding: 20px; box-shadow: 0 12px 48px rgba(0,0,0,.2); }
+      .pill { display: inline-block; padding: 4px 10px; border-radius: 999px; background: rgba(94,234,212,.12); color: var(--accent); font-size: 12px; }
+      .muted { color: var(--muted); }
+      h1, h2, p { margin-top: 0; }
+      .danger { color: var(--danger); }
+      code { color: var(--accent); }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <span class="pill">OpenClaw Dashboard</span>
+      <h1>Multi-node monitoring starts here.</h1>
+      <p class="muted">This deployment preset gives you reverse proxying, health checks, SQLite persistence, backups, and optional Loki/Promtail log aggregation.</p>
+      <div class="grid">
+        <div class="card">
+          <h2>Backend</h2>
+          <p>API health endpoint: <code>/api/health</code></p>
+          <p class="muted">Containerized Node.js service with SQLite WAL enabled.</p>
+        </div>
+        <div class="card">
+          <h2>Frontend</h2>
+          <p>Served by Nginx behind the main reverse proxy.</p>
+          <p class="muted">Replace this static shell with your SPA when ready.</p>
+        </div>
+        <div class="card">
+          <h2>Operations</h2>
+          <p>Health checks and backups are already wired.</p>
+          <p class="muted">Observability stack is optional via the <code>observability</code> profile.</p>
+        </div>
+      </div>
+      <div class="card" style="margin-top: 16px;">
+        <h2>Next step</h2>
+        <p>Run <code>docker compose --env-file .env up -d --build</code>.</p>
+        <p class="danger">Pretty architecture diagrams are cheap. Operational discipline is not.</p>
+      </div>
+    </div>
+  </body>
+</html>
