@@ -1,5 +1,7 @@
 # Windows 本机安装 OpenClaw
 
+> 注意：这份文档描述的是 Windows 宿主机直装路径。当前仓库默认推荐的是 Docker-first 运行方式；只有在你明确需要维护一台宿主机直装节点时，才使用这份文档。
+
 这份文档只讲一件事：在原生 Windows 上安装 OpenClaw，不使用 `WSL2`，不需要 `Ubuntu`。
 
 先说边界：

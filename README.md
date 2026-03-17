@@ -1,6 +1,12 @@
-# OpenClaw Monorepo (Local Single Source of Truth)
+# OpenClaw Monorepo (Docker-First Source of Truth)
 
-本目录用于统一管理 OpenClaw 本机配置、开源 skills（固定版本/在线安装）与自定义 skills。
+本目录用于统一管理 Docker-first 的 OpenClaw 运行方案、官方镜像定制层、开源 skills（固定版本/在线安装）与自定义脚本。
+
+当前默认口径：
+
+- 本机日常运行以 `openclaw-official` 容器为主
+- 宿主机默认不再保留直装 `openclaw`
+- `make sync` / `make install-skills` / `make verify` 这套流程保留为历史宿主机方案，不再是推荐默认路径
 
 ## 目录
 - `config/`: 非敏感配置模板
@@ -14,32 +20,30 @@
 
 ## 快速开始
 ```bash
-make bootstrap
 cp .env.example .env.local
 # 编辑 .env.local，填入真实值
-make sync
-make install-skills
-make verify
+DOCKER_STACK=openclaw-official make docker-build
+DOCKER_STACK=openclaw-official OPENCLAW_DASHBOARD_PORT=18890 make docker-up
+OPENCLAW_DASHBOARD_PORT=18890 make docker-official-bootstrap
+DOCKER_STACK=openclaw-official make docker-gateway-status
 ```
 
 平台安装参考：
 
-- Windows 安装：[`docs/openclaw-windows-install.md`](docs/openclaw-windows-install.md)
+- Windows 直装（历史/可选）：[`docs/openclaw-windows-install.md`](docs/openclaw-windows-install.md)
 - 官方镜像方案：[`docs/openclaw-official-docker-oneclick.md`](docs/openclaw-official-docker-oneclick.md)
 
 ## 常用命令
 ```bash
-make sync
-make install-skills
-make verify
-make doctor
-make restart
-make status
-make run-web-query QUERY="查看一下有关 AI 的最新新闻，给我10条"
+make docker-logs
+make docker-shell
+make docker-gateway-status
+make docker-dashboard-token
+make docker-down
 ```
 
-## Docker（全新 OpenClaw，独立于本仓库配置）
-当前只保留官方镜像容器模板：
+## Docker（当前唯一推荐主路径）
+当前本机默认只保留官方镜像容器模板：
 
 - `containers/openclaw-official/`：直接基于官方 OpenClaw 镜像，再叠加你当前工作流需要的依赖
 
@@ -114,7 +118,7 @@ make docker-official-bootstrap
 
 如果 Docker 里的 Telegram bot 要接群聊，注意两点：
 
-- Docker 实例不走本仓库的 `make sync`；Telegram 群策略要写到容器内 `~/.openclaw/openclaw.json`
+- Docker 实例不走本仓库的 `make sync`；Telegram 群策略要写到容器内 `/home/node/.openclaw/openclaw.json`
 - 常见最小配置是把 `channels.telegram.groupPolicy` 设为 `open`；如果仍使用 `allowlist`，则必须补 `groupAllowFrom`
 
 常用容器命令：
@@ -129,7 +133,20 @@ make docker-down
 - 容器内 OpenClaw 数据目录是独立卷：`openclaw-home`（不会写入本机 `~/.openclaw`）。
 - 容器内工作目录是独立卷：`openclaw-workspace`。
 - `make docker-up` 后会自动启动网关（容器内前台模式，不依赖 systemd）。
-- Dashboard 默认端口映射为 `http://127.0.0.1:18790/`（可通过 `OPENCLAW_DASHBOARD_PORT` 覆盖）。
+- Dashboard 默认端口映射为 `http://127.0.0.1:18890/`（可通过 `OPENCLAW_DASHBOARD_PORT` 覆盖）。
+
+## 历史宿主机流程（可选）
+如果你后续确实要维护“宿主机直装 OpenClaw”的单独节点，仓库里仍保留旧流程：
+
+```bash
+make bootstrap
+cp .env.example .env.local
+make sync
+make install-skills
+make verify
+```
+
+但这条路径不再代表当前本机实际运行状态，也不是默认推荐的维护方式。
 
 ## 每日 AI 热点自动化
 配置 `.env.local`（至少包含 Telegram 目标）后：
@@ -153,7 +170,7 @@ make test-ai-news-daily
 完整流程说明见 [docs/ai-news-daily-runbook.md](docs/ai-news-daily-runbook.md)。
 
 ## 模型切换（OpenAI / 本地）
-在 `.env.local` 中切换 `OPENCLAW_LLM_MODE` 后执行 `make sync`：
+在 Docker-first 路径里，修改 `.env.local` 后重新执行 `make docker-official-bootstrap`，不要把 `make sync` 当成容器实例的默认入口：
 
 ```bash
 # 切回 OpenAI Codex
@@ -186,7 +203,9 @@ OPENCLAW_WEB_SEARCH_API_KEY=your-brave-key
 ```
 
 ```bash
-make sync
+OPENCLAW_DASHBOARD_PORT=18890 make docker-official-bootstrap
+DOCKER_STACK=openclaw-official make docker-shell
+# 容器内执行：
 openclaw models status --plain
 ```
 
@@ -212,7 +231,7 @@ node skills/custom/tavily-search/scripts/tavily-search.mjs --query "OpenAI lates
 node skills/custom/keyless-search/scripts/keyless-search.mjs --query "OpenAI latest news" --max 5
 ```
 
-安装并检查 skill：
+历史宿主机方案如需安装并检查 skill：
 
 ```bash
 make install-skills
@@ -291,9 +310,9 @@ make test-adapter
 bash tests/adapter/latency-benchmark.sh
 ```
 ## 网关地址
-- Dashboard: `http://127.0.0.1:18789/`
+- Dashboard: `http://127.0.0.1:18890/`
 
 ## 注意
 - `.env.local` 不入库。
-- 密钥只放 `.env.local` 和本机 `~/.openclaw/openclaw.json`。
+- Docker-first 路径下，密钥只放 `.env.local`、宿主机 `~/.openclaw-docker/*` token 文件，以及容器内 `/home/node/.openclaw/openclaw.json`。
 - GitHub 治理开关见 `docs/github-hardening.md`。
