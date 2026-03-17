@@ -1,5 +1,7 @@
 # AI News Daily Runbook
 
+> 注意：本 runbook 目前对应历史宿主机直装 OpenClaw 流程。当前仓库默认本机环境是 Docker-first；如果宿主机已不再安装 `openclaw`，下面这些命令不能直接在宿主机照抄执行。
+
 ## Overview
 
 该流程每天 08:30（Asia/Shanghai）自动执行，产出：
