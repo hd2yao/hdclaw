@@ -23,12 +23,15 @@ class ApiError extends Error {
   }
 }
 
-async function requestJson<T>(path: string): Promise<T> {
+async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: init?.method ?? 'GET',
     headers: {
       authorization: `Bearer ${API_TOKEN}`,
       'content-type': 'application/json',
+      ...(init?.headers ?? {}),
     },
+    body: init?.body,
   });
 
   if (!response.ok) {
@@ -77,4 +80,19 @@ export async function fetchAlerts(input: {
 
 export function isNotFoundError(error: unknown): boolean {
   return error instanceof ApiError && error.status === 404;
+}
+
+export async function createNode(input: {
+  name: string;
+  url: string;
+  token?: string;
+}): Promise<void> {
+  await requestJson<{ item: { id: string } }>('/nodes', {
+    method: 'POST',
+    body: JSON.stringify({
+      name: input.name,
+      url: input.url,
+      token: input.token,
+    }),
+  });
 }

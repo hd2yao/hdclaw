@@ -8,9 +8,10 @@ interface TopbarProps {
   stale: boolean;
   view: 'dashboard' | 'alerts';
   onViewChange: (view: 'dashboard' | 'alerts') => void;
+  onOpenConnectDialog: () => void;
 }
 
-export function Topbar({ wsState, refreshing, stale, view, onViewChange }: TopbarProps) {
+export function Topbar({ wsState, refreshing, stale, view, onViewChange, onOpenConnectDialog }: TopbarProps) {
   return (
     <header className="flex flex-wrap items-start justify-between gap-4 rounded-[20px] border border-[rgba(16,38,37,0.12)] bg-[rgba(255,251,244,0.86)] px-5 py-4">
       <div>
@@ -62,6 +63,14 @@ export function Topbar({ wsState, refreshing, stale, view, onViewChange }: Topba
             Alerts
           </button>
         </nav>
+
+        <button
+          type="button"
+          onClick={onOpenConnectDialog}
+          className="rounded-full bg-[rgba(18,49,49,0.88)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-light)] transition hover:bg-[rgba(18,49,49,0.78)]"
+        >
+          Connect Node
+        </button>
 
         <div className="rounded-full border border-[rgba(16,38,37,0.12)] p-2 text-[var(--text-soft)]">
           <Bell className="h-4 w-4" />
