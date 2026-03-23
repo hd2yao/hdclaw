@@ -2,6 +2,8 @@ export type NodeStatus = 'disconnected' | 'connecting' | 'connected' | 'degraded
 export type AgentStatus = 'idle' | 'busy' | 'offline' | 'unknown';
 export type TimelineWindow = '1h' | '24h';
 export type DashboardNodeHealth = 'online' | 'degraded' | 'offline';
+export type DashboardAlertSeverity = 'critical' | 'warning' | 'recovered';
+export type DashboardAlertFilter = 'all' | DashboardAlertSeverity;
 
 export interface ManagedNode {
   id: string;
@@ -185,4 +187,21 @@ export interface DashboardOverviewResponse {
 export interface DashboardNodeDetail extends DashboardNodeState {
   agents: DashboardAgentSummary[];
   resourceHistory: DashboardNodeResources[];
+}
+
+export interface DashboardAlertEvent {
+  id: string;
+  severity: DashboardAlertSeverity;
+  nodeId: string;
+  nodeName: string;
+  agentId: string | null;
+  summary: string;
+  detail: string | null;
+  createdAt: string;
+  recovered: boolean;
+}
+
+export interface DashboardAlertsResponse {
+  generatedAt: string;
+  items: DashboardAlertEvent[];
 }

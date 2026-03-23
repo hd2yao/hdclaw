@@ -1,5 +1,9 @@
 import { db } from '../client.js';
 import type {
+  DashboardAlertEvent,
+  DashboardAlertFilter,
+  DashboardAlertSeverity,
+  DashboardAlertsResponse,
   AgentSnapshot,
   AgentTimelineEvent,
   DashboardAgentSummary,
@@ -63,6 +67,18 @@ interface MessageCounterRow {
   inbound_count: number;
   outbound_count: number;
   updated_at: string;
+}
+
+interface TimelineRow {
+  id: number;
+  node_id: string;
+  agent_id: string;
+  session_id: string | null;
+  event_type: string;
+  summary: string;
+  detail: string | null;
+  status: string | null;
+  created_at: string;
 }
 
 function toDashboardNodeHealth(status: string): DashboardNodeHealth {
@@ -140,6 +156,44 @@ function subtractMilliseconds(referenceIso: string, delta: number): string {
   }
 
   return new Date(reference - delta).toISOString();
+}
+
+function toLowerText(value: string | null | undefined): string {
+  return (value ?? '').toLowerCase();
+}
+
+function classifyTimelineSeverity(eventType: string, summary: string, detail: string | null, status: string | null): DashboardAlertSeverity | null {
+  const statusText = toLowerText(status);
+  const typeText = toLowerText(eventType);
+  const summaryText = toLowerText(summary);
+  const detailText = toLowerText(detail);
+  const combined = `${typeText} ${summaryText} ${detailText}`;
+
+  if (statusText === 'error' || statusText === 'failed' || typeText.includes('failed') || typeText === 'system') {
+    return 'critical';
+  }
+  if (statusText === 'completed' || statusText === 'idle' || typeText.includes('recovered') || typeText.includes('completed')) {
+    return 'recovered';
+  }
+  if (
+    statusText === 'warning' ||
+    statusText === 'degraded' ||
+    typeText.includes('stalled') ||
+    combined.includes('stale') ||
+    combined.includes('stuck') ||
+    combined.includes('degrad')
+  ) {
+    return 'warning';
+  }
+
+  return null;
+}
+
+function applySeverityFilter(items: DashboardAlertEvent[], severity: DashboardAlertFilter): DashboardAlertEvent[] {
+  if (severity === 'all') {
+    return items;
+  }
+  return items.filter((item) => item.severity === severity);
 }
 
 export const telemetryRepository = {
@@ -361,6 +415,172 @@ export const telemetryRepository = {
       status: row.status,
       createdAt: row.created_at,
     }));
+  },
+
+  getDashboardAlerts(options: {
+    window: TimelineWindow;
+    severity: DashboardAlertFilter;
+    nodeId?: string | null;
+  }): DashboardAlertsResponse {
+    const nodeId = options.nodeId ?? null;
+    const latestNode = db.prepare('SELECT MAX(last_seen_at) AS ts FROM nodes WHERE (? IS NULL OR id = ?)').get(nodeId, nodeId) as {
+      ts: string | null;
+    };
+    const latestAgent = db.prepare('SELECT MAX(last_seen_at) AS ts FROM agents WHERE (? IS NULL OR node_id = ?)').get(nodeId, nodeId) as {
+      ts: string | null;
+    };
+    const latestSession = db.prepare('SELECT MAX(last_seen_at) AS ts FROM sessions WHERE (? IS NULL OR node_id = ?)').get(nodeId, nodeId) as {
+      ts: string | null;
+    };
+    const latestTimeline = db.prepare('SELECT MAX(created_at) AS ts FROM agent_timeline_events WHERE (? IS NULL OR node_id = ?)').get(nodeId, nodeId) as {
+      ts: string | null;
+    };
+
+    const referenceIso = maxIso([
+      latestNode.ts,
+      latestAgent.ts,
+      latestSession.ts,
+      latestTimeline.ts,
+      new Date().toISOString(),
+    ]);
+    const cutoff = subtractWindow(referenceIso, options.window);
+    const items: DashboardAlertEvent[] = [];
+
+    const nodeRows = db.prepare(`
+      SELECT id, name, status, last_seen_at
+      FROM nodes
+      WHERE status != 'connected'
+        AND (? IS NULL OR id = ?)
+        AND COALESCE(last_seen_at, ?) >= ?
+      ORDER BY COALESCE(last_seen_at, ?) DESC
+    `).all(nodeId, nodeId, referenceIso, cutoff, referenceIso) as Array<{
+      id: string;
+      name: string;
+      status: string;
+      last_seen_at: string | null;
+    }>;
+    for (const node of nodeRows) {
+      const severity: DashboardAlertSeverity = node.status === 'disconnected' ? 'critical' : 'warning';
+      const createdAt = node.last_seen_at ?? referenceIso;
+      items.push({
+        id: `node-${node.id}-${createdAt}-${node.status}`,
+        severity,
+        nodeId: node.id,
+        nodeName: node.name,
+        agentId: null,
+        summary: `${node.name} is ${toDashboardNodeHealth(node.status)}`,
+        detail: node.last_seen_at ? `Last heartbeat ${node.last_seen_at}` : 'No recent heartbeat',
+        createdAt,
+        recovered: false,
+      });
+    }
+
+    const staleAgentRows = db.prepare(`
+      SELECT a.node_id, n.name AS node_name, a.agent_id, a.name, a.stale_reason, a.last_seen_at
+      FROM agents a
+      INNER JOIN nodes n ON n.id = a.node_id
+      WHERE a.stale_reason IS NOT NULL
+        AND a.last_seen_at >= ?
+        AND (? IS NULL OR a.node_id = ?)
+      ORDER BY a.last_seen_at DESC
+    `).all(cutoff, nodeId, nodeId) as Array<{
+      node_id: string;
+      node_name: string;
+      agent_id: string;
+      name: string;
+      stale_reason: string;
+      last_seen_at: string;
+    }>;
+    for (const row of staleAgentRows) {
+      items.push({
+        id: `agent-stale-${row.node_id}-${row.agent_id}-${row.last_seen_at}`,
+        severity: 'warning',
+        nodeId: row.node_id,
+        nodeName: row.node_name,
+        agentId: row.agent_id,
+        summary: `${row.name} is stale`,
+        detail: row.stale_reason,
+        createdAt: row.last_seen_at,
+        recovered: false,
+      });
+    }
+
+    const queueRows = db.prepare(`
+      SELECT s.node_id, n.name AS node_name, s.agent_id, s.session_id, s.queue_depth, s.last_seen_at
+      FROM sessions s
+      INNER JOIN nodes n ON n.id = s.node_id
+      WHERE s.queue_depth > 0
+        AND s.last_seen_at >= ?
+        AND (? IS NULL OR s.node_id = ?)
+      ORDER BY s.last_seen_at DESC
+    `).all(cutoff, nodeId, nodeId) as Array<{
+      node_id: string;
+      node_name: string;
+      agent_id: string | null;
+      session_id: string;
+      queue_depth: number;
+      last_seen_at: string;
+    }>;
+    for (const row of queueRows) {
+      const severity: DashboardAlertSeverity = row.queue_depth >= 10 ? 'critical' : 'warning';
+      items.push({
+        id: `session-queue-${row.node_id}-${row.session_id}-${row.last_seen_at}`,
+        severity,
+        nodeId: row.node_id,
+        nodeName: row.node_name,
+        agentId: row.agent_id,
+        summary: `Session queue depth ${row.queue_depth}`,
+        detail: `sessionId=${row.session_id}`,
+        createdAt: row.last_seen_at,
+        recovered: false,
+      });
+    }
+
+    const timelineRows = db.prepare(`
+      SELECT t.id, t.node_id, n.name AS node_name, t.agent_id, t.session_id, t.event_type, t.summary, t.detail, t.status, t.created_at
+      FROM agent_timeline_events t
+      INNER JOIN nodes n ON n.id = t.node_id
+      WHERE t.created_at >= ?
+        AND (? IS NULL OR t.node_id = ?)
+      ORDER BY t.created_at DESC
+      LIMIT 400
+    `).all(cutoff, nodeId, nodeId) as Array<
+      TimelineRow & {
+        node_name: string;
+      }
+    >;
+    for (const row of timelineRows) {
+      const severity = classifyTimelineSeverity(row.event_type, row.summary, row.detail, row.status);
+      if (!severity) continue;
+      items.push({
+        id: `timeline-${row.id}`,
+        severity,
+        nodeId: row.node_id,
+        nodeName: row.node_name,
+        agentId: row.agent_id,
+        summary: row.summary,
+        detail: row.detail ?? row.event_type,
+        createdAt: row.created_at,
+        recovered: severity === 'recovered',
+      });
+    }
+
+    const deduped = new Map<string, DashboardAlertEvent>();
+    for (const item of items) {
+      if (!deduped.has(item.id)) {
+        deduped.set(item.id, item);
+      }
+    }
+
+    const filtered = applySeverityFilter(Array.from(deduped.values()), options.severity)
+      .sort((left, right) => (left.createdAt < right.createdAt ? 1 : -1))
+      .slice(0, 300);
+    const generatedAt = maxIso([referenceIso, ...filtered.map((item) => item.createdAt)]);
+
+    return {
+      generatedAt,
+      items: filtered,
+    };
   },
 
   getDashboardOverview(): DashboardOverviewResponse {

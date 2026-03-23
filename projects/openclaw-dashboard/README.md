@@ -131,6 +131,9 @@
 #### `GET /api/nodes/:nodeId/agents/:agentId/timeline?window=1h|24h`
 返回指定 agent 时间线事件，支持 `1h` 和 `24h` 窗口。
 
+#### `GET /api/alerts?window=1h|24h&severity=all|warning|critical|recovered&nodeId=...`
+返回告警/事件聚合流，支持按时间窗口、严重级别与节点过滤。
+
 ### WebSocket Events
 
 连接地址：`/ws`

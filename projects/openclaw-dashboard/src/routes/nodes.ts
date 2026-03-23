@@ -11,6 +11,11 @@ const createNodeSchema = z.object({
 const timelineQuerySchema = z.object({
   window: z.enum(['1h', '24h']).default('1h'),
 });
+const alertsQuerySchema = z.object({
+  window: z.enum(['1h', '24h']).default('24h'),
+  severity: z.enum(['all', 'warning', 'critical', 'recovered']).default('all'),
+  nodeId: z.string().min(1).optional(),
+});
 
 export const nodeRouter = Router();
 
@@ -69,4 +74,23 @@ nodeRouter.get('/nodes/:nodeId/agents/:agentId/timeline', (req, res) => {
 
   const timeline = telemetryRepository.getAgentTimeline(nodeId, req.params.agentId, queryParsed.data.window);
   res.json({ items: timeline });
+});
+
+nodeRouter.get('/alerts', (req, res) => {
+  const queryParsed = alertsQuerySchema.safeParse(req.query);
+  if (!queryParsed.success) {
+    res.status(400).json({ error: 'invalid_query' });
+    return;
+  }
+
+  const { nodeId, window, severity } = queryParsed.data;
+  if (nodeId) {
+    const node = telemetryRepository.getLastKnownNodeState(nodeId);
+    if (!node) {
+      res.status(404).json({ error: 'node_not_found' });
+      return;
+    }
+  }
+
+  res.json(telemetryRepository.getDashboardAlerts({ nodeId, window, severity }));
 });

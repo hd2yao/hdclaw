@@ -132,3 +132,8 @@ export interface DashboardAlert {
   createdAt: string;
   recovered: boolean;
 }
+
+export interface DashboardAlertsResponse {
+  generatedAt: string;
+  items: DashboardAlert[];
+}

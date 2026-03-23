@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { fetchAgentTimeline, fetchNodeDetail, fetchOverview, isNotFoundError } from '../lib/api';
+import { fetchAgentTimeline, fetchAlerts, fetchNodeDetail, fetchOverview, isNotFoundError } from '../lib/api';
 import type {
   AgentDeltaFramePayload,
   AgentTimelineEvent,
@@ -62,22 +62,6 @@ function deriveSeverityFromSession(event: SessionEventFramePayload): DashboardAl
   if (event.status === 'error') return 'critical';
   if (event.status === 'idle' || event.status === 'completed') return 'recovered';
   return 'warning';
-}
-
-function buildNodeStatusAlerts(overview: DashboardOverviewResponse): DashboardAlert[] {
-  return overview.nodes
-    .filter((node) => node.status !== 'online')
-    .map((node) => ({
-      id: `node-${node.id}-${overview.generatedAt}`,
-      severity: deriveSeverityFromNodeStatus(node.status),
-      nodeId: node.id,
-      nodeName: node.name,
-      agentId: null,
-      summary: `${node.name} is ${node.status}`,
-      detail: node.lastSeenAt ? `Last heartbeat ${node.lastSeenAt}` : 'No recent heartbeat',
-      createdAt: overview.generatedAt,
-      recovered: false,
-    }));
 }
 
 function parseFrame(data: unknown): DashboardWsFrame | null {
@@ -225,7 +209,16 @@ export function useDashboardSocket(): UseDashboardSocketResult {
     setLastUpdatedAt(Date.now());
     setTimedOut(false);
     setError(null);
-    setAlerts((current) => mergeUniqueAlerts(buildNodeStatusAlerts(nextOverview), current));
+  }
+
+  async function loadAlerts() {
+    try {
+      const payload = await fetchAlerts({ window: '24h' });
+      setAlerts(payload.items);
+    } catch (nextError) {
+      const message = nextError instanceof Error ? nextError.message : 'failed to fetch alerts';
+      setError(message);
+    }
   }
 
   async function loadOverview() {
@@ -233,6 +226,7 @@ export function useDashboardSocket(): UseDashboardSocketResult {
     try {
       const nextOverview = await fetchOverview();
       await applyOverview(nextOverview);
+      await loadAlerts();
     } catch (nextError) {
       const message = nextError instanceof Error ? nextError.message : 'failed to fetch dashboard overview';
       setError(message);
@@ -274,6 +268,7 @@ export function useDashboardSocket(): UseDashboardSocketResult {
         setLastUpdatedAt(Date.now());
         if (frame.type === 'dashboard.snapshot') {
           void applyOverview(frame.payload);
+          void loadAlerts();
           return;
         }
 
