@@ -77,6 +77,44 @@ export interface DashboardEvent<T = unknown> {
   payload: T;
 }
 
+export interface TelemetrySnapshotReadyPayload {
+  nodeId: string;
+  collectedAt: string;
+}
+
+export interface NodeStateChangedPayload {
+  nodeId: string;
+  from: NodeStatus;
+  to: NodeStatus;
+  reason?: string;
+}
+
+export interface AgentStateChangedPayload {
+  nodeId: string;
+  agentId: string;
+  previousStatus: AgentStatus;
+  currentStatus: AgentStatus;
+  previousTaskPhase: string | null;
+  currentTaskPhase: string | null;
+  currentTaskSummary: string | null;
+  lastProgressAt: string | null;
+}
+
+export interface TimelineEventCreatedPayload {
+  nodeId: string;
+  agentId: string;
+  eventType: string;
+  summary: string;
+  status: string | null;
+  createdAt: string;
+}
+
+export type DashboardInternalEvent =
+  | { type: 'telemetry.snapshot.ready'; ts: string; payload: TelemetrySnapshotReadyPayload }
+  | { type: 'node.state.changed'; ts: string; payload: NodeStateChangedPayload }
+  | { type: 'agent.state.changed'; ts: string; payload: AgentStateChangedPayload }
+  | { type: 'timeline.event.created'; ts: string; payload: TimelineEventCreatedPayload };
+
 export interface AgentTimelineEvent {
   id?: number;
   nodeId: string;

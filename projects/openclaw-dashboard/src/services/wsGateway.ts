@@ -2,7 +2,7 @@ import type { Server as HttpServer } from 'node:http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { logger } from '../logger.js';
 import { eventBus } from './eventBus.js';
-import type { DashboardEvent } from '../types.js';
+import type { DashboardInternalEvent } from '../types.js';
 
 export class DashboardWsGateway {
   private wss: WebSocketServer;
@@ -17,7 +17,7 @@ export class DashboardWsGateway {
     eventBus.subscribe((event) => this.broadcast(event));
   }
 
-  broadcast(event: DashboardEvent): void {
+  broadcast(event: DashboardInternalEvent): void {
     // 移除可能包含循环引用的字段
     const safeEvent = {
       type: event.type,
