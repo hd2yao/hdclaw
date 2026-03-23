@@ -34,7 +34,7 @@ export function Sidebar({ nodes, selectedNodeId, onSelectNode }: SidebarProps) {
         <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-[rgba(248,244,236,0.70)]">
           <Server className="h-4 w-4" /> Node Fleet
         </div>
-        <h1 className="font-display text-[42px] font-bold leading-[0.95] text-[var(--text-light)]">OpenClaw Monitor</h1>
+        <h1 className="font-display text-[34px] font-bold leading-[0.98] text-[var(--text-light)]">OpenClaw Monitor</h1>
         <p className="mt-3 text-sm text-[rgba(248,244,236,0.76)]">Select a node to inspect agents, timeline, and resource pressure.</p>
       </div>
 
@@ -58,7 +58,7 @@ export function Sidebar({ nodes, selectedNodeId, onSelectNode }: SidebarProps) {
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <div className="text-[29px] font-bold leading-[1.05] text-[var(--text-light)]">{node.name}</div>
+                  <div className="text-[22px] font-bold leading-[1.08] text-[var(--text-light)]">{node.name}</div>
                   <div className="mt-1 text-xs text-[rgba(248,244,236,0.70)]">{node.url}</div>
                 </div>
                 <StatusBadge status={node.status} />

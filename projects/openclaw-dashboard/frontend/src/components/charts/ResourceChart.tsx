@@ -32,7 +32,7 @@ export function ResourceChart({ history }: ResourceChartProps) {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div>
           <div className="text-xs uppercase tracking-[0.24em] text-[var(--accent-brass)]">Resource Trend</div>
-          <h3 className="font-display mt-1 text-[42px] font-bold leading-[0.95] text-[var(--text-light)]">CPU / memory / queue depth</h3>
+          <h3 className="font-display mt-1 text-[30px] font-bold leading-[1.04] text-[var(--text-light)] md:text-[34px]">CPU / memory / queue depth</h3>
         </div>
         <span className="rounded-full bg-[rgba(18,49,49,0.88)] px-3 py-1 text-xs uppercase tracking-[0.1em] text-[var(--text-light)]">
           last {chartData.length}m

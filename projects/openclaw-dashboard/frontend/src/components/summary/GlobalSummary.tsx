@@ -43,7 +43,7 @@ export function GlobalSummary({ summary }: GlobalSummaryProps) {
           style={index === 1 ? { backgroundImage: 'linear-gradient(149deg, rgba(184,138,67,0.18), rgba(121,199,167,0.18))' } : { backgroundColor: 'rgba(255,251,244,0.86)' }}
         >
           <div className="text-xs uppercase tracking-[0.2em] text-[var(--text-soft)]">{metric.label}</div>
-          <div className="mt-2 text-[42px] font-bold leading-none text-[var(--text-strong)]">{metric.value}</div>
+          <div className="mt-2 text-[34px] font-bold leading-none text-[var(--text-strong)]">{metric.value}</div>
           <div className="mt-2 text-sm text-[var(--text-soft)]">{metric.hint}</div>
         </article>
       ))}

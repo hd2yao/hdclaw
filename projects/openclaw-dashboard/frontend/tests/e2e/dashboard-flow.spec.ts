@@ -19,6 +19,15 @@ test('readonly dashboard flow: node -> agent timeline -> alerts', async ({ page 
   await expect(sg14AgentRow).not.toBeVisible();
   await expect(sg21AgentRow).toBeVisible();
 
+  await page.getByRole('button', { name: 'Node Detail' }).click();
+  await expect(page.getByRole('heading', { name: /Node detail/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Singapore Gateway' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Agent Work' }).click();
+  await expect(page.getByRole('heading', { name: /Agent work detail/i })).toBeVisible();
+  await expect(page.getByText('agent-sg-21')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Dashboard' }).click();
   await page.getByRole('searchbox').fill('');
   await page.getByRole('button', { name: 'Alerts' }).click();
 

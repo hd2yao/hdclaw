@@ -17,7 +17,7 @@ export function NodeOverview({ node }: NodeOverviewProps) {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="text-xs uppercase tracking-[0.24em] text-[var(--accent-brass)]">Selected node</div>
-            <h2 className="font-display mt-2 text-[32px] font-bold leading-[1.02] text-[var(--text-strong)] sm:text-[42px] [overflow-wrap:anywhere]">
+            <h2 className="font-display mt-2 text-[28px] font-bold leading-[1.06] text-[var(--text-strong)] sm:text-[34px] [overflow-wrap:anywhere]">
               {node.name}
             </h2>
           </div>
@@ -83,10 +83,10 @@ function Metric({ label, value, icon }: { label: string; value: string; icon?: R
       <div
         className={
           isDarkPanelMetric
-            ? 'mt-2 text-[34px] font-bold leading-[1.05] text-[var(--text-light)]'
+            ? 'mt-2 text-[28px] font-bold leading-[1.08] text-[var(--text-light)]'
             : isEndpoint
               ? 'mt-2 text-sm font-semibold leading-[1.35] text-[var(--text-strong)] [overflow-wrap:anywhere]'
-              : 'mt-2 text-[26px] font-bold leading-[1.1] text-[var(--text-strong)]'
+              : 'mt-2 text-[22px] font-bold leading-[1.12] text-[var(--text-strong)]'
         }
       >
         {value}

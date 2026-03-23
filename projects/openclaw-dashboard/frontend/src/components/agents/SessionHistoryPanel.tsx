@@ -19,7 +19,7 @@ export function SessionHistoryPanel({ agent, events, window, onWindowChange }: S
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <div className="text-xs uppercase tracking-[0.24em] text-[var(--accent-brass)]">Selected Timeline</div>
-          <div className="font-display text-[46px] font-bold leading-[0.95] text-[var(--text-light)]">{agent?.name ?? 'Select an agent'}</div>
+          <div className="font-display text-[30px] font-bold leading-[1.04] text-[var(--text-light)] md:text-[34px]">{agent?.name ?? 'Select an agent'}</div>
         </div>
         <div className="flex items-center gap-2">
           <button

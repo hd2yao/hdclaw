@@ -50,7 +50,7 @@ export function AlertsPage({ alerts, nodes }: AlertsPageProps) {
         <div className="grid gap-4 xl:grid-cols-[1.2fr,1fr]">
           <section className="rounded-[28px] border border-[rgba(16,38,37,0.12)] bg-[rgba(255,251,244,0.88)] p-4">
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="font-display text-[42px] font-bold leading-[0.95] text-[var(--text-strong)]">Incidents with enough context to act</h3>
+              <h3 className="font-display text-[30px] font-bold leading-[1.04] text-[var(--text-strong)] md:text-[34px]">Incidents with enough context to act</h3>
               <span className="rounded-full bg-[rgba(18,49,49,0.88)] px-3 py-1 text-xs uppercase tracking-[0.1em] text-[var(--text-light)]">
                 {filteredAlerts.length} active
               </span>
