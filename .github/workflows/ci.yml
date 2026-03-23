@@ -23,3 +23,34 @@ jobs:
       - name: Local install smoke (no OpenClaw dependency)
         run: |
           OPENCLAW_SKILLS_DIR=/tmp/openclaw-skills INSTALL_ONLINE=false bash scripts/install-skills.sh
+
+  dashboard-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            projects/openclaw-dashboard/package-lock.json
+            projects/openclaw-dashboard/frontend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: projects/openclaw-dashboard
+        run: npm ci
+
+      - name: Install frontend dependencies
+        working-directory: projects/openclaw-dashboard/frontend
+        run: npm ci
+
+      - name: Install Playwright chromium
+        working-directory: projects/openclaw-dashboard/frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Run dashboard e2e
+        working-directory: projects/openclaw-dashboard/frontend
+        run: npm run test:e2e -- --reporter=line
