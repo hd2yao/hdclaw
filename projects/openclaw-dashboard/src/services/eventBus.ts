@@ -1,6 +1,6 @@
-import type { DashboardEvent } from '../types.js';
+import type { DashboardInternalEvent } from '../types.js';
 
-type Listener = (event: DashboardEvent) => void;
+type Listener = (event: DashboardInternalEvent) => void;
 
 export class EventBus {
   private listeners = new Set<Listener>();
@@ -10,7 +10,7 @@ export class EventBus {
     return () => this.listeners.delete(listener);
   }
 
-  publish(event: DashboardEvent): void {
+  publish(event: DashboardInternalEvent): void {
     for (const listener of this.listeners) {
       listener(event);
     }

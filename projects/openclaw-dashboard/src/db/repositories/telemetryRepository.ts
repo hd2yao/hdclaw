@@ -133,6 +133,15 @@ function subtractWindow(referenceIso: string, window: TimelineWindow): string {
   return new Date(reference - delta).toISOString();
 }
 
+function subtractMilliseconds(referenceIso: string, delta: number): string {
+  const reference = new Date(referenceIso).getTime();
+  if (!Number.isFinite(reference)) {
+    return referenceIso;
+  }
+
+  return new Date(reference - delta).toISOString();
+}
+
 export const telemetryRepository = {
   saveGateway(nodeId: string, gateway: GatewaySnapshot, collectedAt: string): void {
     db.prepare('INSERT INTO gateway_snapshots (node_id, bind_address, port, status, collected_at) VALUES (?, ?, ?, ?, ?)')
@@ -198,6 +207,19 @@ export const telemetryRepository = {
   },
 
   appendAgentTimelineEvents(events: AgentTimelineEvent[]): void {
+    const dedupeStmt = db.prepare(`
+      SELECT id
+      FROM agent_timeline_events
+      WHERE node_id = @nodeId
+        AND agent_id = @agentId
+        AND event_type = @eventType
+        AND summary = @summary
+        AND IFNULL(status, '') = IFNULL(@status, '')
+        AND created_at >= @cutoff
+        AND created_at <= @createdAt
+      ORDER BY created_at DESC
+      LIMIT 1
+    `);
     const insertStmt = db.prepare(`
       INSERT INTO agent_timeline_events (
         node_id, agent_id, session_id, event_type, summary, detail, status, created_at
@@ -207,6 +229,14 @@ export const telemetryRepository = {
 
     const tx = db.transaction((items: AgentTimelineEvent[]) => {
       for (const item of items) {
+        const duplicate = dedupeStmt.get({
+          ...item,
+          status: item.status ?? null,
+          cutoff: subtractMilliseconds(item.createdAt, 5000),
+        }) as { id: number } | undefined;
+        if (duplicate) {
+          continue;
+        }
         insertStmt.run(item);
       }
     });
