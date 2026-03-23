@@ -47,10 +47,36 @@ interface StatusAgentEntry {
   };
 }
 
+interface SessionOrigin {
+  label?: string;
+}
+
+interface SessionLike {
+  key?: string;
+  sessionId?: string;
+  updatedAt?: number | string;
+  kind?: string;
+  displayName?: string;
+  origin?: SessionOrigin;
+  model?: string;
+  abortedLastRun?: boolean;
+  inputTokens?: number;
+  outputTokens?: number;
+}
+
+interface StatusAgentSessionsEntry {
+  agentId?: string;
+  path?: string;
+  recent?: SessionLike[];
+}
+
 interface StatusResponse {
   health?: {
     ok?: boolean;
     agents?: StatusAgentEntry[];
+  };
+  sessions?: {
+    byAgent?: Record<string, StatusAgentSessionsEntry> | StatusAgentSessionsEntry[];
   };
 }
 
@@ -62,13 +88,7 @@ interface AgentsListResponse {
 }
 
 interface SessionsListResponse {
-  sessions?: Array<{
-    key?: string;
-    sessionId?: string;
-    updatedAt?: number | string;
-    kind?: string;
-    abortedLastRun?: boolean;
-  }>;
+  sessions?: SessionLike[];
 }
 
 function toHttpOrigin(url: string): string {
@@ -77,21 +97,29 @@ function toHttpOrigin(url: string): string {
   return `${protocol}//${parsed.host}`;
 }
 
-function asIsoDate(value: unknown, fallback: string): string {
+function asTimestamp(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) {
-    return new Date(value).toISOString();
+    return value;
   }
 
   if (typeof value === 'string') {
     const numeric = Number(value);
     if (Number.isFinite(numeric)) {
-      return new Date(numeric).toISOString();
+      return numeric;
     }
+    const parsed = new Date(value).getTime();
+    if (!Number.isNaN(parsed)) {
+      return parsed;
+    }
+  }
 
-    const parsed = new Date(value);
-    if (!Number.isNaN(parsed.getTime())) {
-      return parsed.toISOString();
-    }
+  return null;
+}
+
+function asIsoDate(value: unknown, fallback: string): string {
+  const timestamp = asTimestamp(value);
+  if (timestamp !== null) {
+    return new Date(timestamp).toISOString();
   }
 
   return fallback;
@@ -104,6 +132,217 @@ function extractAgentId(sessionKey: unknown): string | null {
     return parts[1] || null;
   }
   return null;
+}
+
+function pickSessionSummary(session: SessionLike): string | null {
+  if (typeof session.displayName === 'string' && session.displayName.trim()) {
+    return session.displayName;
+  }
+  if (typeof session.origin?.label === 'string' && session.origin.label.trim()) {
+    return session.origin.label;
+  }
+  if (typeof session.key === 'string' && session.key.trim()) {
+    return session.key;
+  }
+  if (typeof session.sessionId === 'string' && session.sessionId.trim()) {
+    return session.sessionId;
+  }
+  return null;
+}
+
+function isRecentlyActive(updatedAt: unknown, collectedAt: string): boolean {
+  const updatedAtMs = asTimestamp(updatedAt);
+  const collectedAtMs = asTimestamp(collectedAt);
+  if (updatedAtMs === null || collectedAtMs === null) {
+    return false;
+  }
+  return collectedAtMs - updatedAtMs <= 2 * 60_000;
+}
+
+function toByAgentEntries(status: StatusResponse): StatusAgentSessionsEntry[] {
+  const byAgent = status.sessions?.byAgent;
+  if (!byAgent) return [];
+  if (Array.isArray(byAgent)) return byAgent;
+  return Object.values(byAgent);
+}
+
+function pickLatestSession(sessions: SessionLike[]): SessionLike | null {
+  let latest: SessionLike | null = null;
+  let latestTs = Number.NEGATIVE_INFINITY;
+  for (const session of sessions) {
+    const ts = asTimestamp(session.updatedAt);
+    if (ts === null) continue;
+    if (ts > latestTs) {
+      latestTs = ts;
+      latest = session;
+    }
+  }
+  return latest;
+}
+
+function buildStatusAgentLookup(status: StatusResponse): Map<string, { workspace: string | null; latestSession: SessionLike | null }> {
+  const lookup = new Map<string, { workspace: string | null; latestSession: SessionLike | null }>();
+
+  for (const entry of status.health?.agents ?? []) {
+    if (typeof entry.agentId !== 'string' || !entry.agentId) continue;
+    lookup.set(entry.agentId, {
+      workspace: entry.sessions?.path ?? null,
+      latestSession: null,
+    });
+  }
+
+  for (const byAgentEntry of toByAgentEntries(status)) {
+    if (typeof byAgentEntry.agentId !== 'string' || !byAgentEntry.agentId) continue;
+    const previous = lookup.get(byAgentEntry.agentId);
+    lookup.set(byAgentEntry.agentId, {
+      workspace: byAgentEntry.path ?? previous?.workspace ?? null,
+      latestSession: pickLatestSession(byAgentEntry.recent ?? []) ?? previous?.latestSession ?? null,
+    });
+  }
+
+  return lookup;
+}
+
+function buildLatestSessionByAgent(sessionsResult: SessionsListResponse): Map<string, SessionLike> {
+  const sessionsByAgent = new Map<string, SessionLike>();
+  for (const session of sessionsResult.sessions ?? []) {
+    const agentId = extractAgentId(session.key);
+    if (!agentId) continue;
+    const previous = sessionsByAgent.get(agentId);
+    const currentTs = asTimestamp(session.updatedAt) ?? Number.NEGATIVE_INFINITY;
+    const previousTs = asTimestamp(previous?.updatedAt) ?? Number.NEGATIVE_INFINITY;
+    if (!previous || currentTs >= previousTs) {
+      sessionsByAgent.set(agentId, session);
+    }
+  }
+  return sessionsByAgent;
+}
+
+function inferGatewayStatus(status: StatusResponse): GatewaySnapshot['status'] {
+  if (status.health?.ok === false) {
+    return 'stopped';
+  }
+  if (status.health?.ok === true || status.sessions) {
+    return 'running';
+  }
+  return 'unknown';
+}
+
+function buildGatewaySnapshot(url: string, status: StatusResponse): GatewaySnapshot {
+  const parsed = new URL(url);
+  return {
+    bindAddress: parsed.hostname,
+    port: parsed.port ? Number(parsed.port) : parsed.protocol === 'wss:' ? 443 : 80,
+    status: inferGatewayStatus(status),
+  };
+}
+
+function buildAgents(
+  statusResult: StatusResponse,
+  agentsResult: AgentsListResponse,
+  sessionsResult: SessionsListResponse,
+  collectedAt: string,
+): AgentSnapshot[] {
+  const statusLookup = buildStatusAgentLookup(statusResult);
+  const latestSessionByAgent = buildLatestSessionByAgent(sessionsResult);
+
+  return (agentsResult.agents ?? [])
+    .filter((entry): entry is { id: string; name?: string } => typeof entry.id === 'string' && entry.id.length > 0)
+    .map((entry) => {
+      const statusInfo = statusLookup.get(entry.id);
+      const latestSession = latestSessionByAgent.get(entry.id) ?? statusInfo?.latestSession ?? null;
+      const active = latestSession ? isRecentlyActive(latestSession.updatedAt, collectedAt) : false;
+      const hasError = latestSession?.abortedLastRun === true;
+      const status: AgentSnapshot['status'] = hasError ? 'unknown' : active ? 'busy' : 'idle';
+      const lastProgressAt = latestSession ? asIsoDate(latestSession.updatedAt, collectedAt) : null;
+
+      return {
+        nodeId: '',
+        agentId: entry.id,
+        name: entry.name ?? entry.id,
+        model: typeof latestSession?.model === 'string' ? latestSession.model : null,
+        workspace: statusInfo?.workspace ?? null,
+        configJson: null,
+        status,
+        busy: status === 'busy',
+        taskSummary: latestSession ? pickSessionSummary(latestSession) : null,
+        taskPhase: typeof latestSession?.kind === 'string' ? latestSession.kind : null,
+        taskStartedAt: null,
+        lastProgressAt,
+        staleReason: hasError ? 'last run aborted' : null,
+        updatedAt: lastProgressAt ?? collectedAt,
+      };
+    });
+}
+
+function buildSessions(sessionsResult: SessionsListResponse, collectedAt: string): SessionSnapshot[] {
+  return (sessionsResult.sessions ?? []).map((session) => {
+    const updatedAt = asIsoDate(session.updatedAt, collectedAt);
+    const running = isRecentlyActive(session.updatedAt, collectedAt);
+    return {
+      nodeId: '',
+      sessionId: session.sessionId ?? session.key ?? collectedAt,
+      agentId: extractAgentId(session.key),
+      status: session.abortedLastRun ? 'error' : running ? 'running' : 'idle',
+      taskSummary: pickSessionSummary(session),
+      taskPhase: typeof session.kind === 'string' ? session.kind : null,
+      taskStartedAt: null,
+      lastProgressAt: updatedAt,
+      queueDepth: 0,
+      updatedAt,
+    };
+  });
+}
+
+function buildMessageCounters(sessionsResult: SessionsListResponse, collectedAt: string): MessageCounterSnapshot {
+  let inbound = 0;
+  let outbound = 0;
+  let latestUpdatedAt: unknown = null;
+  let latestTimestamp = Number.NEGATIVE_INFINITY;
+
+  for (const session of sessionsResult.sessions ?? []) {
+    if (typeof session.inputTokens === 'number' && Number.isFinite(session.inputTokens)) {
+      inbound += session.inputTokens;
+    }
+    if (typeof session.outputTokens === 'number' && Number.isFinite(session.outputTokens)) {
+      outbound += session.outputTokens;
+    }
+    const updatedAtMs = asTimestamp(session.updatedAt);
+    if (updatedAtMs !== null && updatedAtMs >= latestTimestamp) {
+      latestTimestamp = updatedAtMs;
+      latestUpdatedAt = session.updatedAt;
+    }
+  }
+
+  return {
+    nodeId: '',
+    inbound,
+    outbound,
+    updatedAt: asIsoDate(latestUpdatedAt, collectedAt),
+  };
+}
+
+export interface NormalizeGatewaySnapshotInput {
+  url: string;
+  collectedAt: string;
+  statusResult: StatusResponse;
+  agentsResult: AgentsListResponse;
+  sessionsResult: SessionsListResponse;
+}
+
+export function normalizeGatewaySnapshot(input: NormalizeGatewaySnapshotInput): NodeTelemetryPayload {
+  return {
+    gateway: buildGatewaySnapshot(input.url, input.statusResult),
+    resources: {
+      cpuPercent: null,
+      memoryUsedMb: null,
+      memoryTotalMb: null,
+    },
+    agents: buildAgents(input.statusResult, input.agentsResult, input.sessionsResult, input.collectedAt),
+    sessions: buildSessions(input.sessionsResult, input.collectedAt),
+    messages: buildMessageCounters(input.sessionsResult, input.collectedAt),
+    collectedAt: input.collectedAt,
+  };
 }
 
 class GatewayRpcConnection {
@@ -193,18 +432,13 @@ export class OpenClawRpcClient {
         connection.request<SessionsListResponse>('sessions.list', {}),
       ]);
 
-      return {
-        gateway: this.buildGatewaySnapshot(statusResult),
-        resources: {
-          cpuPercent: null,
-          memoryUsedMb: null,
-          memoryTotalMb: null,
-        },
-        agents: this.buildAgents(statusResult, agentsResult, collectedAt),
-        sessions: this.buildSessions(sessionsResult, collectedAt),
-        messages: this.buildMessageCounters(collectedAt),
+      return normalizeGatewaySnapshot({
+        url: this.url,
         collectedAt,
-      };
+        statusResult,
+        agentsResult,
+        sessionsResult,
+      });
     } finally {
       connection.close();
     }
@@ -289,69 +523,5 @@ export class OpenClawRpcClient {
       ws.on('error', onError);
       ws.on('close', onClose);
     });
-  }
-
-  private buildGatewaySnapshot(status: StatusResponse): GatewaySnapshot {
-    const parsed = new URL(this.url);
-    return {
-      bindAddress: parsed.hostname,
-      port: parsed.port ? Number(parsed.port) : parsed.protocol === 'wss:' ? 443 : 80,
-      status: status.health?.ok ? 'running' : 'unknown',
-    };
-  }
-
-  private buildAgents(status: StatusResponse, agentsResult: AgentsListResponse, collectedAt: string): AgentSnapshot[] {
-    const statusAgents = new Map<string, StatusAgentEntry>();
-    for (const entry of status.health?.agents ?? []) {
-      if (typeof entry.agentId === 'string' && entry.agentId) {
-        statusAgents.set(entry.agentId, entry);
-      }
-    }
-
-    return (agentsResult.agents ?? [])
-      .filter((entry): entry is { id: string; name?: string } => typeof entry.id === 'string' && entry.id.length > 0)
-      .map((entry) => {
-        const statusEntry = statusAgents.get(entry.id);
-        return {
-          nodeId: '',
-          agentId: entry.id,
-          name: entry.name ?? statusEntry?.name ?? entry.id,
-          model: null,
-          workspace: statusEntry?.sessions?.path ?? null,
-          configJson: null,
-          status: 'idle',
-          busy: false,
-          taskSummary: null,
-          taskPhase: null,
-          taskStartedAt: null,
-          lastProgressAt: null,
-          staleReason: null,
-          updatedAt: collectedAt,
-        };
-      });
-  }
-
-  private buildSessions(sessionsResult: SessionsListResponse, collectedAt: string): SessionSnapshot[] {
-    return (sessionsResult.sessions ?? []).map((session) => ({
-      nodeId: '',
-      sessionId: session.sessionId ?? session.key ?? collectedAt,
-      agentId: extractAgentId(session.key),
-      status: session.abortedLastRun ? 'error' : session.kind ?? 'running',
-      taskSummary: null,
-      taskPhase: null,
-      taskStartedAt: null,
-      lastProgressAt: null,
-      queueDepth: 0,
-      updatedAt: asIsoDate(session.updatedAt, collectedAt),
-    }));
-  }
-
-  private buildMessageCounters(collectedAt: string): MessageCounterSnapshot {
-    return {
-      nodeId: '',
-      inbound: 0,
-      outbound: 0,
-      updatedAt: collectedAt,
-    };
   }
 }
