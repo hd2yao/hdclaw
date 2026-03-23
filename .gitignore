@@ -4,3 +4,5 @@
 .tmp/
 .worktrees/
 .DS_Store
+projects/openclaw-dashboard/frontend/test-results/
+projects/openclaw-dashboard/frontend/playwright-report/
