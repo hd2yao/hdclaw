@@ -1,4 +1,6 @@
 import type {
+  AlertFilter,
+  DashboardAlertsResponse,
   DashboardNodeDetail,
   DashboardOverviewResponse,
   TimelineResponse,
@@ -55,6 +57,22 @@ export async function fetchAgentTimeline(nodeId: string, agentId: string, window
   return await requestJson<TimelineResponse>(
     `/nodes/${encodeURIComponent(nodeId)}/agents/${encodeURIComponent(agentId)}/timeline?window=${encodeURIComponent(window)}`,
   );
+}
+
+export async function fetchAlerts(input: {
+  window?: TimelineWindow;
+  severity?: AlertFilter;
+  nodeId?: string;
+} = {}): Promise<DashboardAlertsResponse> {
+  const query = new URLSearchParams();
+  query.set('window', input.window ?? '24h');
+  if (input.severity && input.severity !== 'all') {
+    query.set('severity', input.severity);
+  }
+  if (input.nodeId) {
+    query.set('nodeId', input.nodeId);
+  }
+  return await requestJson<DashboardAlertsResponse>(`/alerts?${query.toString()}`);
 }
 
 export function isNotFoundError(error: unknown): boolean {
