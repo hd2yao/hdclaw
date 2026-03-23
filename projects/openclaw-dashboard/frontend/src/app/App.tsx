@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { SessionHistoryPanel } from '../components/agents/SessionHistoryPanel';
 import { AgentTable } from '../components/agents/AgentTable';
 import { ResourceChart } from '../components/charts/ResourceChart';
+import { AddNodeDialog } from '../components/layout/AddNodeDialog';
 import { Sidebar } from '../components/layout/Sidebar';
 import { Topbar } from '../components/layout/Topbar';
 import { NodeOverview } from '../components/nodes/NodeOverview';
@@ -9,11 +10,15 @@ import { EmptyStatePanel } from '../components/states/EmptyStatePanel';
 import { DashboardSkeleton } from '../components/states/DashboardSkeleton';
 import { GlobalSummary } from '../components/summary/GlobalSummary';
 import { useDashboardSocket } from '../hooks/useDashboardSocket';
+import { createNode } from '../lib/api';
 import type { DashboardNodeDetail } from '../types/dashboard';
 import { AlertsPage } from './AlertsPage';
 
 export default function App() {
   const [view, setView] = useState<'dashboard' | 'alerts'>('dashboard');
+  const [addNodeOpen, setAddNodeOpen] = useState(false);
+  const [creatingNode, setCreatingNode] = useState(false);
+  const [createNodeError, setCreateNodeError] = useState<string | null>(null);
   const {
     overview,
     selectedNode,
@@ -44,6 +49,21 @@ export default function App() {
       resourceHistory: selectedNode.resources ? [selectedNode.resources] : [],
     };
   }, [selectedNode, selectedNodeDetail]);
+
+  const handleCreateNode = async (input: { name: string; url: string; token?: string }) => {
+    setCreatingNode(true);
+    setCreateNodeError(null);
+    try {
+      await createNode(input);
+      setAddNodeOpen(false);
+      await retry();
+    } catch (nextError) {
+      const message = nextError instanceof Error ? nextError.message : 'failed to create node';
+      setCreateNodeError(message);
+    } finally {
+      setCreatingNode(false);
+    }
+  };
 
   if (loading && !overview) {
     return <DashboardSkeleton />;
@@ -95,7 +115,17 @@ export default function App() {
           />
 
           <main className="space-y-4 bg-[linear-gradient(180deg,rgba(255,254,251,0.70),rgba(241,234,219,0.78))] px-4 py-4 text-[var(--text-strong)] lg:px-6 lg:py-6">
-            <Topbar wsState={wsState} refreshing={refreshing} stale={stale} view={view} onViewChange={setView} />
+            <Topbar
+              wsState={wsState}
+              refreshing={refreshing}
+              stale={stale}
+              view={view}
+              onViewChange={setView}
+              onOpenConnectDialog={() => {
+                setCreateNodeError(null);
+                setAddNodeOpen(true);
+              }}
+            />
 
             {view === 'alerts' ? (
               <AlertsPage
@@ -135,6 +165,16 @@ export default function App() {
           </main>
         </div>
       </div>
+      <AddNodeDialog
+        open={addNodeOpen}
+        submitting={creatingNode}
+        error={createNodeError}
+        onClose={() => {
+          if (creatingNode) return;
+          setAddNodeOpen(false);
+        }}
+        onSubmit={handleCreateNode}
+      />
     </div>
   );
 }
