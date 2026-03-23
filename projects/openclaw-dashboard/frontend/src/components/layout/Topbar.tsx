@@ -6,8 +6,8 @@ interface TopbarProps {
   wsState: WsState;
   refreshing: boolean;
   stale: boolean;
-  view: 'dashboard' | 'alerts';
-  onViewChange: (view: 'dashboard' | 'alerts') => void;
+  view: 'dashboard' | 'node-detail' | 'agent-work' | 'alerts';
+  onViewChange: (view: 'dashboard' | 'node-detail' | 'agent-work' | 'alerts') => void;
   onOpenConnectDialog: () => void;
 }
 
@@ -16,7 +16,7 @@ export function Topbar({ wsState, refreshing, stale, view, onViewChange, onOpenC
     <header className="flex flex-wrap items-start justify-between gap-4 rounded-[20px] border border-[rgba(16,38,37,0.12)] bg-[rgba(255,251,244,0.86)] px-5 py-4">
       <div>
         <div className="text-xs uppercase tracking-[0.24em] text-[var(--accent-brass)]">OpenClaw Command Desk</div>
-        <div className="font-display mt-1 text-[38px] font-bold leading-[1.05] text-[var(--text-strong)]">
+        <div className="font-display mt-1 text-[30px] font-bold leading-[1.08] text-[var(--text-strong)] md:text-[34px]">
           Business pulse first, operations detail underneath
         </div>
       </div>
@@ -49,6 +49,30 @@ export function Topbar({ wsState, refreshing, stale, view, onViewChange, onOpenC
             )}
           >
             Dashboard
+          </button>
+          <button
+            type="button"
+            onClick={() => onViewChange('node-detail')}
+            className={cn(
+              'rounded-full px-3 py-1.5 text-sm transition',
+              view === 'node-detail'
+                ? 'bg-[rgba(18,49,49,0.88)] text-[var(--text-light)]'
+                : 'text-[var(--text-soft)] hover:text-[var(--text-strong)]',
+            )}
+          >
+            Node Detail
+          </button>
+          <button
+            type="button"
+            onClick={() => onViewChange('agent-work')}
+            className={cn(
+              'rounded-full px-3 py-1.5 text-sm transition',
+              view === 'agent-work'
+                ? 'bg-[rgba(18,49,49,0.88)] text-[var(--text-light)]'
+                : 'text-[var(--text-soft)] hover:text-[var(--text-strong)]',
+            )}
+          >
+            Agent Work
           </button>
           <button
             type="button"

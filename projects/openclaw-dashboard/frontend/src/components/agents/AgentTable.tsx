@@ -55,7 +55,7 @@ export function AgentTable({ agents, selectedAgentId, onSelectAgent }: AgentTabl
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="text-xs uppercase tracking-[0.24em] text-[var(--accent-brass)]">Agent Board</div>
-          <div className="font-display text-[46px] font-bold leading-[0.95] text-[var(--text-strong)]">Live work summary</div>
+          <div className="font-display text-[30px] font-bold leading-[1.04] text-[var(--text-strong)] md:text-[34px]">Live work summary</div>
         </div>
         <div className="rounded-full bg-[rgba(18,49,49,0.88)] px-3 py-2 text-xs uppercase tracking-[0.1em] text-[var(--text-light)]">
           {filteredAgents.length} agents

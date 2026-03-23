@@ -8,7 +8,7 @@ interface EmptyStatePanelProps {
 export function EmptyStatePanel({ title, description, actionLabel, onAction }: EmptyStatePanelProps) {
   return (
     <section className="rounded-[20px] border border-dashed border-[rgba(16,38,37,0.24)] bg-[rgba(255,251,244,0.86)] p-6 text-[var(--text-strong)]">
-      <h3 className="font-display text-[34px] font-bold leading-none text-[var(--text-strong)]">{title}</h3>
+      <h3 className="font-display text-[28px] font-bold leading-[1.05] text-[var(--text-strong)]">{title}</h3>
       <p className="mt-3 text-sm leading-6 text-[var(--text-soft)]">{description}</p>
       {actionLabel && onAction ? (
         <button

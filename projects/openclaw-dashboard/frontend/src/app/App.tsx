@@ -1,4 +1,7 @@
 import { useMemo, useState } from 'react';
+import { AgentWorkDetailPage } from './AgentWorkDetailPage';
+import { AlertsPage } from './AlertsPage';
+import { NodeDetailPage } from './NodeDetailPage';
 import { SessionHistoryPanel } from '../components/agents/SessionHistoryPanel';
 import { AgentTable } from '../components/agents/AgentTable';
 import { ResourceChart } from '../components/charts/ResourceChart';
@@ -12,10 +15,11 @@ import { GlobalSummary } from '../components/summary/GlobalSummary';
 import { useDashboardSocket } from '../hooks/useDashboardSocket';
 import { createNode } from '../lib/api';
 import type { DashboardNodeDetail } from '../types/dashboard';
-import { AlertsPage } from './AlertsPage';
+
+type AppView = 'dashboard' | 'node-detail' | 'agent-work' | 'alerts';
 
 export default function App() {
-  const [view, setView] = useState<'dashboard' | 'alerts'>('dashboard');
+  const [view, setView] = useState<AppView>('dashboard');
   const [addNodeOpen, setAddNodeOpen] = useState(false);
   const [creatingNode, setCreatingNode] = useState(false);
   const [createNodeError, setCreateNodeError] = useState<string | null>(null);
@@ -131,6 +135,22 @@ export default function App() {
               <AlertsPage
                 alerts={alerts}
                 nodes={overview.nodes.map((node) => ({ id: node.id, name: node.name }))}
+              />
+            ) : view === 'node-detail' ? (
+              <NodeDetailPage
+                node={activeNodeDetail}
+                selectedAgentId={selectedAgent?.id ?? null}
+                onSelectAgent={selectAgent}
+              />
+            ) : view === 'agent-work' ? (
+              <AgentWorkDetailPage
+                node={activeNodeDetail}
+                selectedAgent={selectedAgent}
+                selectedAgentId={selectedAgent?.id ?? null}
+                timeline={timeline}
+                timelineWindow={timelineWindow}
+                onSelectAgent={selectAgent}
+                onTimelineWindowChange={setTimelineWindow}
               />
             ) : (
               <>
