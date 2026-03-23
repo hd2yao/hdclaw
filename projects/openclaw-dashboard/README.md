@@ -122,38 +122,32 @@
 ```
 
 #### `GET /api/overview`
-返回聚合总览：节点状态、agent 状态统计、session 状态统计、最新资源数据。
+返回聚合总览（`generatedAt + summary + nodes`），用于首页首屏。
 
-> 建议后续继续补：
-- `GET /api/nodes/:id`
-- `GET /api/nodes/:id/agents`
-- `GET /api/nodes/:id/sessions`
-- `GET /api/nodes/:id/resources?from=&to=`
-- `GET /api/events?nodeId=&type=&limit=`
+#### `GET /api/nodes/:nodeId`
+返回单节点详情，包括基础信息、资源历史和完整 agent 列表。
+
+#### `GET /api/nodes/:nodeId/agents/:agentId/timeline?window=1h|24h`
+返回指定 agent 时间线事件，支持 `1h` 和 `24h` 窗口。
 
 ### WebSocket Events
 
 连接地址：`/ws`
 
-事件格式：
+事件格式（首帧 + 增量）：
 ```json
 {
-  "type": "telemetry.snapshot",
+  "type": "dashboard.snapshot",
   "ts": "2026-03-16T09:00:00.000Z",
   "payload": {}
 }
 ```
 
-建议事件清单：
-- `system.ready`
-- `node.registered`
-- `node.connected`
-- `node.degraded`
-- `node.disconnected`
-- `telemetry.snapshot`
-- `agent.status.changed`
-- `session.queue.changed`
-- `message.counter.updated`
+当前事件清单：
+- `dashboard.snapshot`（连接首帧）
+- `node.delta`
+- `agent.delta`
+- `session.event`
 
 ## SQLite 数据模型
 
@@ -328,10 +322,19 @@ curl -H 'Authorization: Bearer dev-key-for-testing' \
 
 如果返回节点状态 `online` 且包含 agents 列表，说明 dashboard 已经成功接入当前 Docker 里的 OpenClaw。
 
+## 压测入口（100+ agents）
+
+`tests/load/dashboard-100-agents.smoke.mjs` 会在临时数据库注入 128 agents、资源历史和 timeline，并起临时服务压测主要只读接口：
+
+```bash
+cd /Users/dysania/program/openclaw/projects/openclaw-dashboard
+node --import tsx tests/load/dashboard-100-agents.smoke.mjs
+```
+
 ## 下一步建议
 
-1. 把 `OpenClawRpcClient` 换成真实 OpenClaw JSON-RPC method 调用
-2. 为 overview 增加分页与时间范围过滤
-3. 增加 agent/session 差异比对，发更细粒度 WebSocket 事件
-4. 增加 retention job，定期清理旧 snapshots
-5. 若节点规模继续扩大，再考虑把 SQLite 热数据迁到 Timeseries/ClickHouse；别一上来就过度工程，很多人只是喜欢为未来不存在的问题烧今天的时间
+1. 给 `Alerts / Events` 增加服务端事件源（当前以节点状态和 session.event 为主）
+2. 在前端给 agent 列表补虚拟滚动（当前结构已预留）
+3. 增加节点/agent 过滤器与搜索
+4. 补充前端 E2E 自动化（overview -> node detail -> timeline -> alerts）
+5. 增加 retention job，定期清理旧 snapshots
