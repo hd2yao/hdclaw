@@ -8,6 +8,9 @@ const createNodeSchema = z.object({
   url: z.string().url().or(z.string().startsWith('ws://')).or(z.string().startsWith('wss://')),
   token: z.string().optional(),
 });
+const timelineQuerySchema = z.object({
+  window: z.enum(['1h', '24h']).default('1h'),
+});
 
 export const nodeRouter = Router();
 
@@ -37,5 +40,33 @@ nodeRouter.post('/nodes', (req, res) => {
 });
 
 nodeRouter.get('/overview', (_req, res) => {
-  res.json(telemetryRepository.getOverview());
+  res.json(telemetryRepository.getDashboardOverview());
+});
+
+nodeRouter.get('/nodes/:nodeId', (req, res) => {
+  const detail = telemetryRepository.getNodeDetail(req.params.nodeId);
+  if (!detail) {
+    res.status(404).json({ error: 'node_not_found' });
+    return;
+  }
+
+  res.json(detail);
+});
+
+nodeRouter.get('/nodes/:nodeId/agents/:agentId/timeline', (req, res) => {
+  const queryParsed = timelineQuerySchema.safeParse(req.query);
+  if (!queryParsed.success) {
+    res.status(400).json({ error: 'invalid_query', issues: queryParsed.error.issues });
+    return;
+  }
+
+  const nodeId = req.params.nodeId;
+  const node = telemetryRepository.getLastKnownNodeState(nodeId);
+  if (!node) {
+    res.status(404).json({ error: 'node_not_found' });
+    return;
+  }
+
+  const timeline = telemetryRepository.getAgentTimeline(nodeId, req.params.agentId, queryParsed.data.window);
+  res.json({ items: timeline });
 });
