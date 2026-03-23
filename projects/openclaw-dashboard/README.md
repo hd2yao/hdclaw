@@ -70,7 +70,8 @@
 
 ### 2. RPC Client Adapter
 - 负责与 OpenClaw 节点的 WebSocket RPC 通信
-- 当前提供协议适配占位层，后续只需要把真实 RPC method 名补进去
+- 当前已按真实网关方法适配 `status`、`health`、`agents.list`、`sessions.list`
+- agent 任务摘要、阶段、最近进展和 token 计数通过 `sessions.list` 聚合得到
 - 推荐按“批量拉取快照”模式获取数据，减少高频多请求放大效应
 
 ### 3. Telemetry Repository
@@ -176,13 +177,12 @@
 
 ### 心跳 / 采集
 - 默认每 5 秒采集一次
-- 推荐真实协议里提供一个聚合 RPC：
-  - `gateway.status`
-  - `agents.list`
-  - `sessions.list`
-  - `system.resources`
-  - `messages.stats`
-- 更好的现实方案：节点侧提供 `dashboard.snapshot` 单一 RPC，后端一次拉全量
+- 当前默认调用：
+  - `status`（会话与心跳总览）
+  - `health`（网关健康补充）
+  - `agents.list`（agent 列表）
+  - `sessions.list`（任务与 token 统计）
+- 若后续网关提供 `dashboard.snapshot`，建议优先切到单一聚合方法以降低请求开销
 
 ### 断线重连
 - 首次失败：1s
