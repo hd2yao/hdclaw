@@ -1,25 +1,25 @@
 import { cn } from '../../lib/utils';
 
 const palette: Record<string, string> = {
-  online: 'bg-emerald-500/15 text-emerald-300 ring-emerald-500/30',
-  degraded: 'bg-amber-500/15 text-amber-300 ring-amber-500/30',
-  offline: 'bg-slate-500/20 text-slate-200 ring-slate-500/40',
-  busy: 'bg-sky-500/15 text-sky-300 ring-sky-500/30',
-  idle: 'bg-teal-500/15 text-teal-300 ring-teal-500/30',
-  running: 'bg-sky-500/15 text-sky-300 ring-sky-500/30',
-  completed: 'bg-emerald-500/15 text-emerald-300 ring-emerald-500/30',
-  error: 'bg-rose-500/15 text-rose-300 ring-rose-500/30',
-  unknown: 'bg-zinc-500/20 text-zinc-200 ring-zinc-500/40',
-  warning: 'bg-amber-500/15 text-amber-300 ring-amber-500/30',
-  critical: 'bg-rose-500/15 text-rose-300 ring-rose-500/30',
-  recovered: 'bg-emerald-500/15 text-emerald-300 ring-emerald-500/30',
+  online: 'bg-[rgba(121,199,167,0.18)] text-[#0d6b51]',
+  degraded: 'bg-[rgba(217,168,90,0.20)] text-[#8b5d15]',
+  offline: 'bg-[rgba(201,104,77,0.18)] text-[#9d3a23]',
+  busy: 'bg-[rgba(121,199,167,0.18)] text-[#0d6b51]',
+  idle: 'bg-[rgba(19,49,49,0.12)] text-[#13201f]',
+  running: 'bg-[rgba(121,199,167,0.18)] text-[#0d6b51]',
+  completed: 'bg-[rgba(121,199,167,0.18)] text-[#0d6b51]',
+  error: 'bg-[rgba(201,104,77,0.18)] text-[#9d3a23]',
+  unknown: 'bg-[rgba(19,49,49,0.12)] text-[#13201f]',
+  warning: 'bg-[rgba(217,168,90,0.20)] text-[#8b5d15]',
+  critical: 'bg-[rgba(201,104,77,0.18)] text-[#9d3a23]',
+  recovered: 'bg-[rgba(121,199,167,0.18)] text-[#0d6b51]',
 };
 
 export function StatusBadge({ status }: { status: string }) {
   const normalized = status.toLowerCase();
   const style = palette[normalized] ?? palette.unknown;
   return (
-    <span className={cn('inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium capitalize ring-1', style)}>
+    <span className={cn('inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.08em]', style)}>
       {normalized}
     </span>
   );

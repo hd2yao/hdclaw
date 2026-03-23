@@ -51,7 +51,7 @@ export default function App() {
 
   if (timedOut && !overview) {
     return (
-      <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(14,116,144,0.25),transparent_45%),#020617] p-5">
+      <div className="min-h-screen bg-[linear-gradient(180deg,#f8f3e9_0%,#f3ede2_100%)] p-5">
         <div className="mx-auto max-w-4xl pt-24">
           <EmptyStatePanel
             title="Initial load timed out"
@@ -66,7 +66,7 @@ export default function App() {
 
   if (error && !overview) {
     return (
-      <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(14,116,144,0.25),transparent_45%),#020617] p-5">
+      <div className="min-h-screen bg-[linear-gradient(180deg,#f8f3e9_0%,#f3ede2_100%)] p-5">
         <div className="mx-auto max-w-4xl pt-24">
           <EmptyStatePanel title="Failed to load dashboard" description={error} actionLabel="Retry" onAction={() => void retry()} />
         </div>
@@ -76,7 +76,7 @@ export default function App() {
 
   if (!overview) {
     return (
-      <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(14,116,144,0.25),transparent_45%),#020617] p-5">
+      <div className="min-h-screen bg-[linear-gradient(180deg,#f8f3e9_0%,#f3ede2_100%)] p-5">
         <div className="mx-auto max-w-4xl pt-24">
           <EmptyStatePanel title="No overview available" description="Backend returned no dashboard snapshot." />
         </div>
@@ -85,53 +85,55 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(14,116,144,0.25),transparent_45%),#020617] p-4 text-slate-100 lg:p-5">
-      <div className="mx-auto grid max-w-[1600px] gap-4 lg:grid-cols-[320px,1fr]">
-        <Sidebar
-          nodes={overview.nodes}
-          selectedNodeId={selectedNode?.id ?? null}
-          onSelectNode={selectNode}
-        />
+    <div className="min-h-screen p-4 md:p-6">
+      <div className="mx-auto max-w-[1480px] rounded-[34px] border border-[rgba(19,49,49,0.10)] bg-[rgba(255,251,244,0.7)] p-px shadow-[0_20px_60px_rgba(29,33,31,0.12)]">
+        <div className="grid min-h-[calc(100vh-72px)] overflow-hidden rounded-[32px] lg:grid-cols-[320px,1fr]">
+          <Sidebar
+            nodes={overview.nodes}
+            selectedNodeId={selectedNode?.id ?? null}
+            onSelectNode={selectNode}
+          />
 
-        <main className="space-y-4">
-          <Topbar wsState={wsState} refreshing={refreshing} stale={stale} view={view} onViewChange={setView} />
+          <main className="space-y-4 bg-[linear-gradient(180deg,rgba(255,254,251,0.70),rgba(241,234,219,0.78))] px-4 py-4 text-[var(--text-strong)] lg:px-6 lg:py-6">
+            <Topbar wsState={wsState} refreshing={refreshing} stale={stale} view={view} onViewChange={setView} />
 
-          {view === 'alerts' ? (
-            <AlertsPage
-              alerts={alerts}
-              nodes={overview.nodes.map((node) => ({ id: node.id, name: node.name }))}
-            />
-          ) : (
-            <>
-              <GlobalSummary summary={overview.summary} />
+            {view === 'alerts' ? (
+              <AlertsPage
+                alerts={alerts}
+                nodes={overview.nodes.map((node) => ({ id: node.id, name: node.name }))}
+              />
+            ) : (
+              <>
+                <GlobalSummary summary={overview.summary} />
 
-              {activeNodeDetail ? (
-                <>
-                  <NodeOverview node={activeNodeDetail} />
-                  <ResourceChart history={activeNodeDetail.resourceHistory} />
-                  <section className="grid gap-4 xl:grid-cols-[1.15fr,1fr]">
-                    <AgentTable
-                      agents={activeNodeDetail.agents}
-                      selectedAgentId={selectedAgent?.id ?? null}
-                      onSelectAgent={selectAgent}
-                    />
-                    <SessionHistoryPanel
-                      agent={selectedAgent}
-                      events={timeline}
-                      window={timelineWindow}
-                      onWindowChange={setTimelineWindow}
-                    />
-                  </section>
-                </>
-              ) : (
-                <EmptyStatePanel
-                  title="No node selected"
-                  description="Select a node in the left rail to inspect its details, agents and timeline."
-                />
-              )}
-            </>
-          )}
-        </main>
+                {activeNodeDetail ? (
+                  <>
+                    <NodeOverview node={activeNodeDetail} />
+                    <ResourceChart history={activeNodeDetail.resourceHistory} />
+                    <section className="grid gap-4 xl:grid-cols-[1.15fr,1fr]">
+                      <AgentTable
+                        agents={activeNodeDetail.agents}
+                        selectedAgentId={selectedAgent?.id ?? null}
+                        onSelectAgent={selectAgent}
+                      />
+                      <SessionHistoryPanel
+                        agent={selectedAgent}
+                        events={timeline}
+                        window={timelineWindow}
+                        onWindowChange={setTimelineWindow}
+                      />
+                    </section>
+                  </>
+                ) : (
+                  <EmptyStatePanel
+                    title="No node selected"
+                    description="Select a node in the left rail to inspect its details, agents and timeline."
+                  />
+                )}
+              </>
+            )}
+          </main>
+        </div>
       </div>
     </div>
   );

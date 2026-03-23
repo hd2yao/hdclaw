@@ -7,14 +7,14 @@ interface EmptyStatePanelProps {
 
 export function EmptyStatePanel({ title, description, actionLabel, onAction }: EmptyStatePanelProps) {
   return (
-    <section className="rounded-2xl border border-dashed border-white/20 bg-white/[0.03] p-6 text-slate-300">
-      <h3 className="text-lg font-semibold text-white">{title}</h3>
-      <p className="mt-2 text-sm leading-6 text-slate-400">{description}</p>
+    <section className="rounded-[20px] border border-dashed border-[rgba(16,38,37,0.24)] bg-[rgba(255,251,244,0.86)] p-6 text-[var(--text-strong)]">
+      <h3 className="font-display text-[34px] font-bold leading-none text-[var(--text-strong)]">{title}</h3>
+      <p className="mt-3 text-sm leading-6 text-[var(--text-soft)]">{description}</p>
       {actionLabel && onAction ? (
         <button
           type="button"
           onClick={onAction}
-          className="mt-4 rounded-full border border-cyan-400/40 bg-cyan-400/15 px-4 py-2 text-sm font-semibold text-cyan-200 transition hover:bg-cyan-400/25"
+          className="mt-4 rounded-full border border-[rgba(18,49,49,0.20)] bg-[rgba(18,49,49,0.88)] px-4 py-2 text-sm font-semibold text-[var(--text-light)] transition hover:bg-[rgba(18,49,49,0.78)]"
         >
           {actionLabel}
         </button>
