@@ -1,60 +1,68 @@
-import { Cpu, MemoryStick, MessagesSquare, PlugZap } from 'lucide-react';
-import type { NodeSummary } from '../../types/dashboard';
-import { formatPercent, formatRelativeTime } from '../../lib/utils';
+import { MessagesSquare, PlugZap, Server, Workflow } from 'lucide-react';
+import type { ReactNode } from 'react';
+import type { DashboardNodeDetail } from '../../types/dashboard';
+import { formatAbsoluteTime, formatPercent, formatRelativeTime } from '../../lib/utils';
 import { StatusBadge } from '../states/StatusBadge';
 
-const metrics = [
-  { key: 'cpu', label: 'CPU', icon: Cpu },
-  { key: 'memory', label: 'Memory', icon: MemoryStick },
-];
+interface NodeOverviewProps {
+  node: DashboardNodeDetail;
+}
 
-export function NodeOverview({ node }: { node: NodeSummary }) {
+export function NodeOverview({ node }: NodeOverviewProps) {
   return (
     <section className="grid gap-4 xl:grid-cols-[1.4fr,1fr]">
-      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 shadow-glow">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+      <article className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 shadow-glow">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <div className="text-sm text-slate-400">Node Detail</div>
-            <div className="mt-1 text-2xl font-semibold text-white">{node.name}</div>
-            <div className="mt-2 text-sm text-slate-400">{node.endpoint}</div>
+            <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Node Detail</div>
+            <h2 className="mt-2 text-2xl font-semibold text-white">{node.name}</h2>
+            <div className="mt-2 text-sm text-slate-400">{node.url}</div>
           </div>
           <StatusBadge status={node.status} />
         </div>
 
-        <div className="mt-6 grid gap-3 md:grid-cols-2">
-          {metrics.map(({ key, label, icon: Icon }) => (
-            <div key={key} className="rounded-2xl bg-slate-900/70 p-4">
-              <div className="flex items-center gap-2 text-sm text-slate-400"><Icon className="h-4 w-4" /> {label}</div>
-              <div className="mt-3 text-3xl font-semibold text-white">{formatPercent(node[key as 'cpu' | 'memory'])}</div>
-            </div>
-          ))}
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <Metric label="Gateway" value={node.gateway?.status ?? 'unknown'} icon={<Workflow className="h-4 w-4" />} />
+          <Metric label="Port" value={node.gateway?.port ? String(node.gateway.port) : '--'} icon={<Server className="h-4 w-4" />} />
+          <Metric label="CPU" value={formatPercent(node.resources?.cpuPercent)} icon={<Workflow className="h-4 w-4" />} />
+          <Metric
+            label="Memory"
+            value={node.resources?.memoryUsedMb && node.resources?.memoryTotalMb
+              ? `${Math.round(node.resources.memoryUsedMb)} / ${Math.round(node.resources.memoryTotalMb)} MB`
+              : '--'}
+            icon={<Workflow className="h-4 w-4" />}
+          />
         </div>
-      </div>
+      </article>
 
-      <div className="grid gap-4">
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 shadow-glow">
-          <div className="flex items-center gap-2 text-sm text-slate-400"><MessagesSquare className="h-4 w-4" /> Message Traffic</div>
-          <div className="mt-4 grid grid-cols-3 gap-3">
-            <Metric label="Sent" value={node.messages.sent.toLocaleString()} />
-            <Metric label="Recv" value={node.messages.received.toLocaleString()} />
-            <Metric label="Errors" value={node.messages.errors.toLocaleString()} />
+      <article className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.03] p-5 shadow-glow">
+        <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-slate-500">
+          <MessagesSquare className="h-4 w-4" /> Message Counters
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <Metric label="Inbound" value={String(node.messages?.inbound ?? 0)} />
+          <Metric label="Outbound" value={String(node.messages?.outbound ?? 0)} />
+        </div>
+        <div className="rounded-xl border border-white/10 bg-slate-900/70 p-3">
+          <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-slate-500">
+            <PlugZap className="h-4 w-4" /> Heartbeat
           </div>
+          <div className="mt-2 text-lg font-semibold text-white">{formatRelativeTime(node.lastSeenAt)}</div>
+          <div className="mt-1 text-xs text-slate-500">{formatAbsoluteTime(node.lastSeenAt)}</div>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 shadow-glow">
-          <div className="flex items-center gap-2 text-sm text-slate-400"><PlugZap className="h-4 w-4" /> Heartbeat</div>
-          <div className="mt-3 text-2xl font-semibold text-white">{formatRelativeTime(node.lastHeartbeat)}</div>
-          <div className="mt-2 text-sm text-slate-500">如果这个时间越来越长，说明不是系统稳定，是节点快死了。</div>
-        </div>
-      </div>
+      </article>
     </section>
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function Metric({ label, value, icon }: { label: string; value: string; icon?: ReactNode }) {
   return (
-    <div className="rounded-xl bg-slate-900/70 p-3">
-      <div className="text-xs uppercase tracking-[0.2em] text-slate-500">{label}</div>
-      <div className="mt-2 text-xl font-semibold text-white">{value}</div>
+    <div className="rounded-xl border border-white/10 bg-slate-900/70 p-3">
+      <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-slate-500">
+        {icon}
+        {label}
+      </div>
+      <div className="mt-2 text-lg font-semibold text-white">{value}</div>
     </div>
   );
 }

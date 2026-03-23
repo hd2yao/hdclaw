@@ -1,62 +1,134 @@
-export type HealthState = 'online' | 'degraded' | 'offline';
-export type SessionState = 'running' | 'completed' | 'error' | 'queued';
+export type NodeHealth = 'online' | 'degraded' | 'offline';
+export type GatewayStatus = 'running' | 'stopped' | 'unknown';
+export type TimelineWindow = '1h' | '24h';
+export type WsState = 'connecting' | 'open' | 'closed';
+export type AlertSeverity = 'critical' | 'warning' | 'recovered';
+export type AlertFilter = 'all' | AlertSeverity;
 
-export interface ResourcePoint {
-  timestamp: string;
-  cpu: number;
-  memory: number;
+export interface DashboardSummary {
+  nodeCount: number;
+  onlineNodes: number;
+  degradedNodes: number;
+  offlineNodes: number;
+  busyAgents: number;
+  idleAgents: number;
+  staleAgents: number;
+  outputsLastHour: number;
 }
 
-export interface MessageStats {
-  sent: number;
-  received: number;
-  errors: number;
+export interface DashboardGatewayState {
+  bindAddress: string | null;
+  port: number | null;
+  status: GatewayStatus;
+  collectedAt: string;
 }
 
-export interface AgentSummary {
-  id: string;
-  name: string;
-  role: string;
-  sessionId: string;
-  status: SessionState;
-  cpu: number;
-  memory: number;
-  messages: MessageStats;
+export interface DashboardNodeResources {
+  cpuPercent: number | null;
+  memoryUsedMb: number | null;
+  memoryTotalMb: number | null;
+  collectedAt: string;
+}
+
+export interface DashboardMessageCounters {
+  nodeId: string;
+  inbound: number;
+  outbound: number;
   updatedAt: string;
 }
 
-export interface SessionEvent {
-  id: string;
-  timestamp: string;
-  type: 'status' | 'message' | 'system';
-  summary: string;
-  detail: string;
-  status: SessionState;
-}
-
-export interface NodeSummary {
+export interface DashboardAgentSummary {
   id: string;
   name: string;
-  region: string;
-  endpoint: string;
-  status: HealthState;
-  agentsOnline: number;
-  totalAgents: number;
-  cpu: number;
-  memory: number;
-  messages: MessageStats;
-  lastHeartbeat: string;
-  resourceHistory: ResourcePoint[];
-  agents: AgentSummary[];
+  model: string | null;
+  workspace: string | null;
+  status: string;
+  busy: boolean;
+  taskSummary: string | null;
+  taskPhase: string | null;
+  taskStartedAt: string | null;
+  lastProgressAt: string | null;
+  staleReason: string | null;
+  updatedAt: string;
 }
 
-export interface DashboardSnapshot {
+export interface DashboardNodeState {
+  id: string;
+  name: string;
+  url: string;
+  status: NodeHealth;
+  lastSeenAt: string | null;
+  gateway: DashboardGatewayState | null;
+  resources: DashboardNodeResources | null;
+  messages: DashboardMessageCounters | null;
+}
+
+export interface DashboardOverviewNode extends DashboardNodeState {
+  agents: DashboardAgentSummary[];
+}
+
+export interface DashboardOverviewResponse {
   generatedAt: string;
-  nodes: NodeSummary[];
+  summary: DashboardSummary;
+  nodes: DashboardOverviewNode[];
 }
 
-export interface DashboardState extends DashboardSnapshot {
-  selectedNodeId: string | null;
-  selectedAgentId: string | null;
-  wsState: 'connecting' | 'open' | 'closed';
+export interface DashboardNodeDetail extends DashboardNodeState {
+  agents: DashboardAgentSummary[];
+  resourceHistory: DashboardNodeResources[];
+}
+
+export interface AgentTimelineEvent {
+  id?: number;
+  nodeId: string;
+  agentId: string;
+  sessionId: string | null;
+  eventType: string;
+  summary: string;
+  detail: string | null;
+  status: string | null;
+  createdAt: string;
+}
+
+export interface TimelineResponse {
+  items: AgentTimelineEvent[];
+}
+
+export interface NodeDeltaFramePayload {
+  nodeId: string;
+  node: DashboardNodeState;
+  reason?: string | null;
+}
+
+export interface AgentDeltaFramePayload {
+  nodeId: string;
+  agentId: string;
+  agent: DashboardAgentSummary;
+}
+
+export interface SessionEventFramePayload {
+  nodeId: string;
+  agentId: string;
+  eventType: string;
+  summary: string;
+  status: string | null;
+  createdAt: string;
+}
+
+export type DashboardWsFrame =
+  | { type: 'dashboard.snapshot'; ts: string; payload: DashboardOverviewResponse }
+  | { type: 'node.delta'; ts: string; payload: NodeDeltaFramePayload }
+  | { type: 'agent.delta'; ts: string; payload: AgentDeltaFramePayload }
+  | { type: 'session.event'; ts: string; payload: SessionEventFramePayload };
+
+export interface DashboardAlert {
+  id: string;
+  severity: AlertSeverity;
+  nodeId: string;
+  nodeName: string;
+  agentId: string | null;
+  summary: string;
+  detail: string | null;
+  createdAt: string;
+  recovered: boolean;
 }
