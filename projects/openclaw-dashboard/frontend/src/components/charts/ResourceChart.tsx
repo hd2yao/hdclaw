@@ -25,43 +25,50 @@ export function ResourceChart({ history }: ResourceChartProps) {
   }, [history]);
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 shadow-glow">
+    <section
+      className="rounded-[28px] p-5"
+      style={{ backgroundImage: 'linear-gradient(180deg, rgba(255,255,255,0.04), transparent 26%), linear-gradient(180deg, #1b4140, #123131)' }}
+    >
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Resource Trend</div>
-          <h3 className="mt-1 text-lg font-semibold text-white">CPU / Memory (last {chartData.length} points)</h3>
+          <div className="text-xs uppercase tracking-[0.24em] text-[var(--accent-brass)]">Resource Trend</div>
+          <h3 className="font-display mt-1 text-[42px] font-bold leading-[0.95] text-[var(--text-light)]">CPU / memory / queue depth</h3>
         </div>
+        <span className="rounded-full bg-[rgba(18,49,49,0.88)] px-3 py-1 text-xs uppercase tracking-[0.1em] text-[var(--text-light)]">
+          last {chartData.length}m
+        </span>
       </div>
 
-      <div className="h-72">
+      <div className="h-72 rounded-[20px] border border-[rgba(255,255,255,0.10)] bg-[rgba(255,255,255,0.04)] p-3">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={chartData}>
             <defs>
               <linearGradient id="cpuFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#06b6d4" stopOpacity={0.45} />
-                <stop offset="100%" stopColor="#06b6d4" stopOpacity={0} />
+                <stop offset="0%" stopColor="#b88a43" stopOpacity={0.62} />
+                <stop offset="100%" stopColor="#b88a43" stopOpacity={0.14} />
               </linearGradient>
               <linearGradient id="memoryFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.35} />
-                <stop offset="100%" stopColor="#f59e0b" stopOpacity={0} />
+                <stop offset="0%" stopColor="#c9684d" stopOpacity={0.55} />
+                <stop offset="100%" stopColor="#c9684d" stopOpacity={0.08} />
               </linearGradient>
             </defs>
-            <CartesianGrid stroke="rgba(148,163,184,0.14)" vertical={false} />
+            <CartesianGrid stroke="rgba(248,244,236,0.20)" vertical={false} />
             <XAxis
               dataKey="timestamp"
               tickFormatter={(value) => new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              stroke="#94a3b8"
+              stroke="rgba(248,244,236,0.70)"
             />
-            <YAxis stroke="#94a3b8" domain={[0, 100]} unit="%" />
+            <YAxis stroke="rgba(248,244,236,0.70)" domain={[0, 100]} unit="%" />
             <Tooltip
               contentStyle={{
-                backgroundColor: '#020617',
-                borderColor: 'rgba(148,163,184,0.2)',
+                backgroundColor: 'rgba(18,49,49,0.96)',
+                borderColor: 'rgba(248,244,236,0.2)',
                 borderRadius: 12,
+                color: '#f8f4ec',
               }}
             />
-            <Area type="monotone" dataKey="cpu" stroke="#06b6d4" fill="url(#cpuFill)" strokeWidth={2} />
-            <Area type="monotone" dataKey="memory" stroke="#f59e0b" fill="url(#memoryFill)" strokeWidth={2} />
+            <Area type="monotone" dataKey="cpu" stroke="#b88a43" fill="url(#cpuFill)" strokeWidth={2} />
+            <Area type="monotone" dataKey="memory" stroke="#c9684d" fill="url(#memoryFill)" strokeWidth={2} />
           </AreaChart>
         </ResponsiveContainer>
       </div>

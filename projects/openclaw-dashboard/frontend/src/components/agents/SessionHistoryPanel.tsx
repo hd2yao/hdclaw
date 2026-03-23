@@ -12,19 +12,22 @@ interface SessionHistoryPanelProps {
 
 export function SessionHistoryPanel({ agent, events, window, onWindowChange }: SessionHistoryPanelProps) {
   return (
-    <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 shadow-glow">
+    <section
+      className="rounded-[28px] p-5"
+      style={{ backgroundImage: 'linear-gradient(180deg, rgba(255,255,255,0.04), transparent 26%), linear-gradient(180deg, #1b4140, #123131)' }}
+    >
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
-          <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Agent Timeline</div>
-          <div className="text-lg font-semibold text-white">{agent?.name ?? 'Select an agent'}</div>
+          <div className="text-xs uppercase tracking-[0.24em] text-[var(--accent-brass)]">Selected Timeline</div>
+          <div className="font-display text-[46px] font-bold leading-[0.95] text-[var(--text-light)]">{agent?.name ?? 'Select an agent'}</div>
         </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => onWindowChange('1h')}
             className={cn(
-              'rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] transition',
-              window === '1h' ? 'border-cyan-300/60 bg-cyan-300/20 text-cyan-100' : 'border-white/20 text-slate-300',
+              'rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] transition',
+              window === '1h' ? 'bg-[rgba(18,49,49,0.88)] text-[var(--text-light)]' : 'bg-white/10 text-[rgba(248,244,236,0.70)]',
             )}
           >
             1h
@@ -33,8 +36,8 @@ export function SessionHistoryPanel({ agent, events, window, onWindowChange }: S
             type="button"
             onClick={() => onWindowChange('24h')}
             className={cn(
-              'rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] transition',
-              window === '24h' ? 'border-cyan-300/60 bg-cyan-300/20 text-cyan-100' : 'border-white/20 text-slate-300',
+              'rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] transition',
+              window === '24h' ? 'bg-[rgba(18,49,49,0.88)] text-[var(--text-light)]' : 'bg-white/10 text-[rgba(248,244,236,0.70)]',
             )}
           >
             24h
@@ -44,20 +47,20 @@ export function SessionHistoryPanel({ agent, events, window, onWindowChange }: S
 
       <div className="space-y-3">
         {events.map((event, index) => (
-          <article key={`${event.createdAt}-${event.summary}-${index}`} className="rounded-xl border border-white/10 bg-slate-900/70 p-4">
+          <article key={`${event.createdAt}-${event.summary}-${index}`} className="rounded-[14px] border-l-2 border-l-[rgba(184,138,67,0.4)] bg-transparent p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <div className="text-sm font-semibold text-white">{event.summary}</div>
-                <div className="mt-1 text-xs text-slate-500">{event.eventType}</div>
+                <div className="text-xs uppercase tracking-[0.12em] text-[rgba(248,244,236,0.65)]">{formatAbsoluteTime(event.createdAt)}</div>
+                <div className="mt-2 text-lg font-semibold text-[var(--text-light)]">{event.summary}</div>
+                <div className="mt-1 text-sm text-[rgba(248,244,236,0.76)]">{event.eventType}</div>
               </div>
               <StatusBadge status={event.status ?? 'unknown'} />
             </div>
-            {event.detail ? <div className="mt-2 text-sm text-slate-300">{event.detail}</div> : null}
-            <div className="mt-3 text-xs text-slate-500">{formatAbsoluteTime(event.createdAt)}</div>
+            {event.detail ? <div className="mt-2 text-sm text-[rgba(248,244,236,0.76)]">{event.detail}</div> : null}
           </article>
         ))}
         {!events.length ? (
-          <div className="rounded-2xl border border-dashed border-white/15 p-6 text-sm text-slate-500">
+          <div className="rounded-[20px] border border-dashed border-white/30 p-6 text-sm text-[rgba(248,244,236,0.70)]">
             No timeline events in the current window.
           </div>
         ) : null}

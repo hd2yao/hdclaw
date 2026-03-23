@@ -19,7 +19,7 @@ export function AlertFilterBar({
   onNodeFilterChange,
 }: AlertFilterBarProps) {
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+    <div className="flex flex-wrap items-center gap-3 rounded-[20px] border border-[rgba(16,38,37,0.12)] bg-[rgba(255,251,244,0.86)] p-3">
       <div className="flex flex-wrap gap-2">
         {FILTER_OPTIONS.map((option) => (
           <button
@@ -27,10 +27,10 @@ export function AlertFilterBar({
             type="button"
             onClick={() => onFilterChange(option)}
             className={cn(
-              'rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] transition',
+              'rounded-full px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] transition',
               filter === option
-                ? 'border-cyan-300/60 bg-cyan-300/20 text-cyan-100'
-                : 'border-white/15 text-slate-300 hover:border-white/30',
+                ? 'bg-[rgba(18,49,49,0.88)] text-[var(--text-light)]'
+                : 'bg-[rgba(18,49,49,0.12)] text-[var(--text-strong)]',
             )}
           >
             {option}
@@ -38,12 +38,12 @@ export function AlertFilterBar({
         ))}
       </div>
 
-      <label className="ml-auto flex items-center gap-2 text-xs text-slate-400">
+      <label className="ml-auto flex items-center gap-2 text-xs uppercase tracking-[0.12em] text-[var(--text-soft)]">
         Node
         <select
           value={nodeFilter}
           onChange={(event) => onNodeFilterChange(event.target.value)}
-          className="rounded-full border border-white/20 bg-slate-900/70 px-3 py-1.5 text-sm text-slate-200 outline-none"
+          className="rounded-full border border-[rgba(16,38,37,0.12)] bg-[rgba(255,255,255,0.6)] px-3 py-1.5 text-sm text-[var(--text-strong)] outline-none"
         >
           <option value="">All nodes</option>
           {nodes.map((node) => (
