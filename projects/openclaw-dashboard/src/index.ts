@@ -10,7 +10,7 @@ initDb();
 
 const app = createApp();
 const server = http.createServer(app);
-new DashboardWsGateway(server);
+const wsGateway = new DashboardWsGateway(server);
 nodeManager.start();
 
 server.listen(config.port, () => {
@@ -21,6 +21,7 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.on(signal, () => {
     logger.info({ signal }, 'shutting down OpenClaw Dashboard backend');
     nodeManager.stop();
+    wsGateway.close();
     server.close(() => process.exit(0));
   });
 }
