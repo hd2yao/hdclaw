@@ -3,7 +3,7 @@ DOCKER_STACK ?= openclaw-official
 DASHBOARD_PORT := $(if $(OPENCLAW_DASHBOARD_PORT),$(OPENCLAW_DASHBOARD_PORT),18890)
 DOCKER_COMPOSE := docker compose -f containers/$(DOCKER_STACK)/docker-compose.yml
 
-.PHONY: bootstrap sync sync-workspace-guards install-skills verify doctor start restart status test-config test-skills test-keyless-search test-tavily-search test-search-router test-no-brave-search test-adapter test-adapter-service test-workspace-guards test-execution-audit test-active-task audit-execution setup-ai-news-daily run-ai-news-daily-now run-web-query test-ai-news-daily docker-build docker-up docker-down docker-shell docker-logs docker-init docker-onboard docker-gateway-start docker-gateway-status docker-dashboard-url docker-dashboard-token docker-gh-auth docker-gh-status docker-official-bootstrap
+.PHONY: bootstrap sync sync-workspace-guards install-skills verify doctor start restart status test-config test-skills test-keyless-search test-tavily-search test-search-router test-no-brave-search test-adapter test-adapter-service test-workspace-guards test-execution-audit test-active-task test-watchdog audit-execution setup-ai-news-daily run-ai-news-daily-now run-web-query test-ai-news-daily watchdog-status watchdog-run docker-build docker-up docker-down docker-shell docker-logs docker-init docker-onboard docker-gateway-start docker-gateway-status docker-dashboard-url docker-dashboard-token docker-gh-auth docker-gh-status docker-official-bootstrap
 
 bootstrap:
 	bash scripts/bootstrap.sh
@@ -71,6 +71,9 @@ audit-execution:
 test-active-task:
 	bash tests/workspace/active-task-script.sh
 
+test-watchdog:
+	bash tests/workspace/watchdog-script.sh
+
 setup-ai-news-daily:
 	bash scripts/setup-ai-news-daily-cron.sh
 
@@ -79,6 +82,12 @@ run-ai-news-daily-now:
 
 run-web-query:
 	bash scripts/agent-web-query.sh "$(QUERY)"
+
+watchdog-status:
+	bash scripts/openclaw-watchdog.sh status
+
+watchdog-run:
+	bash scripts/openclaw-watchdog.sh run-once
 
 test-ai-news-daily:
 	bash tests/config/validate-ai-news-env.sh

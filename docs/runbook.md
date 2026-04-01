@@ -124,6 +124,55 @@ docker compose -f containers/openclaw-official/docker-compose.yml exec openclaw 
 docker compose -f containers/openclaw-official/docker-compose.yml exec openclaw openclaw health
 ```
 
+## Session / Gateway Watchdog
+
+新增了一个宿主机侧 watchdog 脚本：
+
+```bash
+make watchdog-status
+make watchdog-run
+```
+
+行为约定：
+
+1. 正在对话中
+   - 脚本会读取 `main` 的最新 Telegram 私聊 session，计算上下文占比。
+   - 达到阈值时只提示，不会自动切会话。
+   - 默认阈值：
+     - `70%`：提示你考虑 `/compact`
+     - `85%+` 且已 compact 过，或连续 timeout：提示你考虑 `/new`
+
+2. 长时间无人处理
+   - 如果 session 已经不活跃，且命中高风险条件（上下文过重或连续 timeout），脚本会自动把旧 session 从 `sessions.json` 中移除，并把旧 transcript 备份成 `.reset.*`。
+   - 下一条 Telegram 消息会自然落到新 session。
+
+3. Telegram 假在线
+   - 如果 `probe.ok=true` 但 `lastInboundAt` 长时间不更新，脚本优先尝试重拉容器内的 `openclaw-gateway` 前台进程。
+   - 只有轻量恢复失败时，才会升级到容器重启。
+
+4. 通知
+   - 活跃对话中的阈值提示：默认通过本机通知 + Telegram bot 消息提示你手动 `/compact` 或 `/new`
+   - 自动 `new session` / 自动重启 gateway：执行后也会发通知
+
+常用环境变量：
+
+```bash
+OPENCLAW_WATCHDOG_SESSION_KEY='agent:main:telegram:direct:1871908422'
+OPENCLAW_WATCHDOG_WARN_PERCENT=70
+OPENCLAW_WATCHDOG_HIGH_PERCENT=85
+OPENCLAW_WATCHDOG_CRITICAL_PERCENT=92
+OPENCLAW_WATCHDOG_ACTIVE_WINDOW_MINUTES=10
+OPENCLAW_WATCHDOG_STALL_MINUTES=45
+OPENCLAW_WATCHDOG_TIMEOUT_THRESHOLD=2
+```
+
+注意：
+
+- `openclaw gateway restart` 在当前 Docker 容器里不是可靠恢复手段，因为 service 模式未安装。
+- watchdog 的“自动 compact”目前没有直接调用 OpenClaw 内部 compaction 命令，而是：
+  - 活跃对话中提醒你手动发 `/compact`
+  - 长时间无人处理时自动执行 `new session`
+
 ## Telegram 绑定
 完整流程见 `docs/telegram-binding.md`。
 
