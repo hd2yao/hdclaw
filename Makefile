@@ -3,7 +3,7 @@ DOCKER_STACK ?= openclaw-official
 DASHBOARD_PORT := $(if $(OPENCLAW_DASHBOARD_PORT),$(OPENCLAW_DASHBOARD_PORT),18890)
 DOCKER_COMPOSE := docker compose -f containers/$(DOCKER_STACK)/docker-compose.yml
 
-.PHONY: bootstrap sync sync-workspace-guards install-skills verify doctor start restart status test-config test-skills test-keyless-search test-tavily-search test-search-router test-no-brave-search test-adapter test-adapter-service test-workspace-guards test-execution-audit test-active-task test-watchdog audit-execution setup-ai-news-daily run-ai-news-daily-now run-web-query test-ai-news-daily watchdog-status watchdog-run docker-build docker-up docker-down docker-shell docker-logs docker-init docker-onboard docker-gateway-start docker-gateway-status docker-dashboard-url docker-dashboard-token docker-gh-auth docker-gh-status docker-official-bootstrap
+.PHONY: bootstrap sync sync-workspace-guards install-skills verify doctor start restart status test-config test-skills test-keyless-search test-tavily-search test-search-router test-no-brave-search test-adapter test-adapter-service test-workspace-guards test-execution-audit test-active-task test-watchdog test-gateway-recover audit-execution setup-ai-news-daily run-ai-news-daily-now run-web-query test-ai-news-daily watchdog-status watchdog-run docker-build docker-up docker-down docker-shell docker-logs docker-init docker-onboard docker-gateway-start docker-gateway-recover docker-gateway-status docker-dashboard-url docker-dashboard-token docker-gh-auth docker-gh-status docker-official-bootstrap
 
 bootstrap:
 	bash scripts/bootstrap.sh
@@ -74,6 +74,9 @@ test-active-task:
 test-watchdog:
 	bash tests/workspace/watchdog-script.sh
 
+test-gateway-recover:
+	bash tests/workspace/gateway-recover-target.sh
+
 setup-ai-news-daily:
 	bash scripts/setup-ai-news-daily-cron.sh
 
@@ -116,6 +119,9 @@ docker-onboard:
 
 docker-gateway-start:
 	$(DOCKER_COMPOSE) exec openclaw sh -lc 'if openclaw gateway health >/dev/null 2>&1; then echo "gateway already healthy"; else nohup openclaw gateway run --allow-unconfigured > $$HOME/.openclaw/gateway.log 2>&1 & sleep 1; openclaw gateway health; fi'
+
+docker-gateway-recover:
+	bash scripts/openclaw-watchdog.sh restart-gateway
 
 docker-gateway-status:
 	$(DOCKER_COMPOSE) exec openclaw sh -lc 'for i in 1 2 3 4 5 6 7 8 9 10; do if openclaw gateway health >/dev/null 2>&1; then openclaw gateway health; exit 0; fi; sleep 1; done; openclaw gateway health'

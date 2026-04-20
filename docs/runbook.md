@@ -21,9 +21,18 @@ DOCKER_STACK=openclaw-official make docker-gateway-status
 ```bash
 make docker-logs
 make docker-shell
+make docker-gateway-recover
 make docker-gateway-status
 make docker-down
 ```
+
+如果出现“容器还活着，但 Telegram 不回消息/看起来卡住了”，优先执行：
+
+```bash
+make docker-gateway-recover
+```
+
+这条命令只会走 watchdog 的 `restart-gateway` 轻量恢复路径，优先重拉容器内 `openclaw-gateway` 进程，不会先重启整台 Docker。
 
 ## 切换模型后端（OpenAI / 本地）
 1. 修改 `.env.local` 中以下变量：
@@ -119,6 +128,7 @@ launchctl kickstart -k gui/$UID/ai.openclaw.sglang-adapter
 
 ## 网关控制
 ```bash
+make docker-gateway-recover
 DOCKER_STACK=openclaw-official make docker-gateway-status
 docker compose -f containers/openclaw-official/docker-compose.yml exec openclaw openclaw gateway restart
 docker compose -f containers/openclaw-official/docker-compose.yml exec openclaw openclaw health
